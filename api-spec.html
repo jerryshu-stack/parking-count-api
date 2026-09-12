@@ -1,0 +1,742 @@
+<title>Parking Count API</title>
+<style>
+  :root {
+    --ground: #eef0f3;
+    --surface: #ffffff;
+    --ink: #14171c;
+    --ink-soft: #5b6472;
+    --line: #dde1e7;
+    --line-soft: #e8ebef;
+    --accent: #1f5fbf;
+    --accent-soft: #e8effa;
+    --warn: #96650a;
+    --warn-soft: #fdf4e3;
+    --get: #0f7a52;
+    --get-soft: #e4f4ed;
+    --del: #a8331f;
+    --del-soft: #fbeae6;
+    --code-bg: #f5f6f8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0e1116;
+      --surface: #171b22;
+      --ink: #e9ecf1;
+      --ink-soft: #98a2b3;
+      --line: #272d37;
+      --line-soft: #1f242c;
+      --accent: #6da3ff;
+      --accent-soft: #18243a;
+      --warn: #e3ad4f;
+      --warn-soft: #2a2214;
+      --get: #4fca97;
+      --get-soft: #12271f;
+      --del: #f08a70;
+      --del-soft: #2c1712;
+      --code-bg: #11151b;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0e1116;
+    --surface: #171b22;
+    --ink: #e9ecf1;
+    --ink-soft: #98a2b3;
+    --line: #272d37;
+    --line-soft: #1f242c;
+    --accent: #6da3ff;
+    --accent-soft: #18243a;
+    --warn: #e3ad4f;
+    --warn-soft: #2a2214;
+    --get: #4fca97;
+    --get-soft: #12271f;
+    --del: #f08a70;
+    --del-soft: #2c1712;
+    --code-bg: #11151b;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 56px 24px 96px;
+    background: var(--ground);
+    color: var(--ink);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+
+  code, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+
+  /* ---- masthead ---- */
+  header { display: flex; flex-direction: column; gap: 14px; }
+  .eyebrow {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  h1 {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    font-size: clamp(28px, 5vw, 38px); font-weight: 600; letter-spacing: -.02em;
+    margin: 0; text-wrap: balance;
+  }
+  .lede { margin: 0; max-width: 62ch; color: var(--ink-soft); font-size: 17px; }
+
+  .base {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 10px; padding: 14px 16px; margin-top: 6px;
+  }
+  .base .k {
+    font-family: ui-monospace, Menlo, monospace; font-size: 11px;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft);
+  }
+  .base .v { font-family: ui-monospace, Menlo, monospace; font-size: 15px; color: var(--accent); word-break: break-all; }
+
+  /* ---- sections ---- */
+  section { display: flex; flex-direction: column; gap: 16px; }
+  h2 {
+    font-size: 13px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--ink-soft); margin: 0;
+    padding-bottom: 10px; border-bottom: 1px solid var(--line);
+  }
+  h3 { font-size: 15px; font-weight: 600; margin: 0; }
+  p { margin: 0; max-width: 68ch; }
+  .muted { color: var(--ink-soft); }
+
+  /* ---- endpoint ---- */
+  .endpoint {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 12px; overflow: hidden;
+  }
+  .sig {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 16px 20px; border-bottom: 1px solid var(--line-soft);
+  }
+  .verb {
+    font-family: ui-monospace, Menlo, monospace; font-size: 12px; font-weight: 700;
+    letter-spacing: .08em; padding: 4px 9px; border-radius: 5px;
+  }
+  .verb.post { background: var(--accent-soft); color: var(--accent); }
+  .verb.get  { background: var(--get-soft);   color: var(--get); }
+  .verb.del  { background: var(--del-soft);   color: var(--del); }
+  .path { font-family: ui-monospace, Menlo, monospace; font-size: 17px; font-weight: 600; }
+  .sig .note { font-size: 13px; color: var(--ink-soft); margin-left: auto; }
+  .body { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+  .block { display: flex; flex-direction: column; gap: 9px; }
+  .label {
+    font-family: ui-monospace, Menlo, monospace; font-size: 11px;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft);
+  }
+
+  /* ---- tables ---- */
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th {
+    text-align: left; font-weight: 600; font-size: 11px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--ink-soft);
+    padding: 0 14px 8px 0; border-bottom: 1px solid var(--line);
+  }
+  td { padding: 11px 14px 11px 0; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  td:first-child, th:first-child { padding-left: 0; }
+  td.code { font-family: ui-monospace, Menlo, monospace; font-size: 13.5px; white-space: nowrap; }
+  td.num { font-variant-numeric: tabular-nums; }
+  .req { color: var(--warn); font-size: 12px; font-family: ui-monospace, Menlo, monospace; }
+  .opt { color: var(--ink-soft); font-size: 12px; font-family: ui-monospace, Menlo, monospace; }
+
+  /* ---- code ---- */
+  pre {
+    margin: 0; background: var(--code-bg); border: 1px solid var(--line-soft);
+    border-radius: 9px; padding: 14px 16px; overflow-x: auto;
+    font-size: 13.5px; line-height: 1.6;
+  }
+  p code, li code {
+    background: var(--code-bg); border: 1px solid var(--line-soft);
+    border-radius: 4px; padding: 1px 5px; font-size: .88em;
+  }
+
+  /* ---- callout ---- */
+  .callout {
+    background: var(--warn-soft); border: 1px solid var(--warn);
+    border-radius: 10px; padding: 16px 18px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .callout .label { color: var(--warn); }
+  .callout p { font-size: 14.5px; }
+
+  ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 7px; }
+  li { max-width: 66ch; }
+
+  a { color: var(--accent); }
+  a:focus-visible, .endpoint:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Internal API &middot; v0 proof of concept</div>
+    <h1>Parking Count API</h1>
+    <p class="lede">
+      Upload a photo of a parking lot with its coordinates. A vision model running on the
+      host machine counts the empty spaces and stores the result. Five endpoints, JSON over HTTPS.
+    </p>
+    <div class="base">
+      <span class="k">Base URL</span>
+      <span class="v">https://dawn-trace-ratio-went.trycloudflare.com</span>
+    </div>
+  </header>
+
+  <div class="callout">
+    <div class="label">Before you integrate</div>
+    <p><b>The base URL is temporary.</b> It comes from a Cloudflare quick tunnel and changes
+      every time the tunnel restarts. Don't hard-code it &mdash; read it from config, and expect to be
+      handed a new one.</p>
+    <p><b>The API key is sent separately.</b> It is not printed in this document. Everywhere below,
+      <code>&lt;API_KEY&gt;</code> means the key you were given.</p>
+  </div>
+
+  <section>
+    <h2>Authentication</h2>
+    <p>All five endpoints require a shared key in the <code>X-API-Key</code> request header.
+      There are no user accounts and no tokens &mdash; every caller uses the same key.</p>
+    <pre class="mono">X-API-Key: &lt;API_KEY&gt;</pre>
+    <p class="muted">A missing or incorrect key returns <code>401</code> with body
+      <code>{"detail":"invalid or missing X-API-Key"}</code>. Because the key travels as a plain
+      header, always call over <code>https://</code> &mdash; never <code>http://</code>.</p>
+  </section>
+
+  <section>
+    <h2>Endpoints</h2>
+
+    <article class="endpoint">
+      <div class="sig">
+        <span class="verb post">POST</span>
+        <span class="path">/upload</span>
+        <span class="note">multipart/form-data</span>
+      </div>
+      <div class="body">
+        <p>Submits one image and its coordinates. The request blocks while the model runs,
+          then returns the stored record.</p>
+
+        <div class="block">
+          <div class="label">Request fields</div>
+          <div class="scroll">
+            <table>
+              <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td class="code">image</td>
+                  <td>file <span class="req">required</span></td>
+                  <td>The photo. Any format the model can decode &mdash; JPEG and PNG are verified.</td>
+                </tr>
+                <tr>
+                  <td class="code">latitude</td>
+                  <td>float <span class="req">required</span></td>
+                  <td>Where the photo was taken. Stored verbatim; never validated or range-checked.</td>
+                </tr>
+                <tr>
+                  <td class="code">longitude</td>
+                  <td>float <span class="req">required</span></td>
+                  <td>As above.</td>
+                </tr>
+                <tr>
+                  <td class="code">name</td>
+                  <td>string <span class="opt">optional</span></td>
+                  <td>Car park name, if you know it. Free text, stored verbatim.</td>
+                </tr>
+                <tr>
+                  <td class="code">price</td>
+                  <td>string <span class="opt">optional</span></td>
+                  <td>Fee description, if you know it. Free text &mdash; no format is imposed.</td>
+                </tr>
+                <tr>
+                  <td class="code">total</td>
+                  <td>integer <span class="opt">optional</span></td>
+                  <td>Total car spaces at the site. Omit it and the record stores
+                    <code>null</code>, never <code>0</code>. A non-integer returns 422.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="muted">Omit either and it is stored as an empty string, never dropped. A phone
+            taking a photo normally knows neither, so uploaded records usually carry
+            <code>""</code> for both.</p>
+        </div>
+
+        <div class="block">
+          <div class="label">Example request</div>
+          <pre>curl -X POST https://dawn-trace-ratio-went.trycloudflare.com/upload \
+  -H "X-API-Key: &lt;API_KEY&gt;" \
+  -F "image=@lot.jpg" \
+  -F "latitude=25.0330" \
+  -F "longitude=121.5654" \
+  -F "name=Taipei 101 B3" \
+  -F "price=100 NTD/hr" \
+  -F "total=228"</pre>
+        </div>
+
+        <div class="block">
+          <div class="label">200 response</div>
+          <pre>{
+  "count": 12,
+  "latitude": 25.033,
+  "longitude": 121.5654,
+  "timestamp": "2026-09-12T06:47:48Z",
+  "name": "Taipei 101 B3",
+  "price": "100 NTD/hr",
+  "total": 228,
+  "source": "photo",
+  "image": "2acc83d61c7047619a49688e7b0d07f6.jpg"
+}</pre>
+          <p class="muted">The response is the single new record &mdash; not the full list.
+            <code>count</code> is the model's estimate of empty spaces, a non-negative integer.
+            <code>timestamp</code> is UTC, second precision, recorded when the request arrived
+            rather than when the model finished. <code>image</code> is the stored copy of your
+            upload &mdash; an opaque generated name, not the filename you sent. Retrieve it with
+            <code>GET /image</code>; there is no URL that serves it by name.</p>
+          <p class="muted">Records created this way always carry <code>image</code> and
+            <code>source: "photo"</code>. Imported records are the mirror image &mdash; see
+            <b>Where a record came from</b> below.</p>
+        </div>
+
+        <div class="block">
+          <div class="label">Timing</div>
+          <p>Inference is synchronous and typically takes <b>2&ndash;8 seconds</b>, dominated by model
+            time rather than upload. Set your client timeout to at least 60 seconds. There is no
+            job queue: concurrent requests are processed one after another by the model, so
+            latency climbs under parallel load.</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="endpoint">
+      <div class="sig">
+        <span class="verb get">GET</span>
+        <span class="path">/results</span>
+        <span class="note">application/json</span>
+      </div>
+      <div class="body">
+        <p>Returns every record ever stored, as a flat JSON array.</p>
+
+        <div class="block">
+          <div class="label">Example request</div>
+          <pre>curl https://dawn-trace-ratio-went.trycloudflare.com/results \
+  -H "X-API-Key: &lt;API_KEY&gt;"</pre>
+        </div>
+
+        <div class="block">
+          <div class="label">200 response</div>
+          <pre>[
+  {
+    "count": 0,
+    "latitude": 25.047603,
+    "longitude": 121.516776,
+    "timestamp": "2026-09-12T09:38:00Z",
+    "name": "\u81fa\u5317\u8eca\u7ad9\u897f\u5340\u5730\u4e0b\u505c\u8eca\u5834",
+    "price": "\u8a08\u6642\uff1a\u5c0f\u578b\u8eca100\u5143/\u6642\uff0c\u505c\u8eca\u5168\u7a0b\u4ee5\u534a\u5c0f\u6642\u8a08\u3002\u6708\u79df\uff1a\u5c0f\u578b\u8eca\u5168\u65e510,000\u5143/\u6708\u3002",
+    "total": 179,
+    "source": "taipei-open-data"
+  },
+  {
+    "count": 19,
+    "latitude": 25.033,
+    "longitude": 121.5654,
+    "timestamp": "2026-09-12T07:57:50Z",
+    "name": "",
+    "price": "",
+    "total": null,
+    "source": "photo",
+    "image": "53776df1a0dd4fd4a8035a15e2e2ffbf.jpg"
+  }
+]</pre>
+          <p class="muted">Chinese text is shown escaped here only to keep this page ASCII; the
+            API returns it as normal UTF-8.</p>
+        </div>
+
+        <div class="block">
+          <div class="label">Ordering and size</div>
+          <p><b>Oldest first.</b> Records come back in the order they were written, so the newest
+            entry is the last element &mdash; reverse the array if you want newest-first. There is no
+            pagination, no <code>limit</code> parameter, and no filtering: the entire history is
+            returned on every call, and the payload grows without bound as uploads accumulate.</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="endpoint">
+      <div class="sig">
+        <span class="verb get">GET</span>
+        <span class="path">/nearby</span>
+        <span class="note">query parameters</span>
+      </div>
+      <div class="body">
+        <p>Returns the records that fall within a radius of a point.</p>
+
+        <div class="block">
+          <div class="label">Query parameters</div>
+          <div class="scroll">
+            <table>
+              <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td class="code">latitude</td>
+                  <td>float <span class="req">required</span></td>
+                  <td>Centre of the search.</td>
+                </tr>
+                <tr>
+                  <td class="code">longitude</td>
+                  <td>float <span class="req">required</span></td>
+                  <td>Centre of the search.</td>
+                </tr>
+                <tr>
+                  <td class="code">radius</td>
+                  <td>float <span class="req">required</span></td>
+                  <td><b>Metres.</b> Must be <code>&gt;= 0</code>; a negative value returns <code>422</code>.
+                    The boundary is inclusive, so a record exactly <code>radius</code> away is included.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="label">Example request</div>
+          <pre>curl -G https://dawn-trace-ratio-went.trycloudflare.com/nearby \
+  -H "X-API-Key: &lt;API_KEY&gt;" \
+  -d latitude=25.0330 -d longitude=121.5654 -d radius=1000</pre>
+        </div>
+
+        <div class="block">
+          <div class="label">200 response</div>
+          <pre>[
+  {
+    "count": 19,
+    "latitude": 25.033,
+    "longitude": 121.5654,
+    "timestamp": "2026-09-12T06:57:55Z",
+    "distance_m": 0.0
+  },
+  {
+    "count": 12,
+    "latitude": 25.0075,
+    "longitude": 121.462,
+    "timestamp": "2026-09-12T06:38:40Z",
+    "distance_m": 10797.6
+  }
+]</pre>
+          <p class="muted">Same record shape as <code>/results</code> plus <code>distance_m</code> &mdash;
+            metres from the search centre, rounded to one decimal. <b>Sorted nearest first</b>,
+            unlike <code>/results</code>. An empty array means nothing matched, not an error.</p>
+        </div>
+
+        <div class="block">
+          <div class="label">How distance is measured</div>
+          <p>Great-circle (haversine) distance on a sphere of radius 6 371 008.8 m. Verified against
+            published figures: London&nbsp;&rarr;&nbsp;Paris 343.6&nbsp;km, New&nbsp;York&nbsp;&rarr;&nbsp;Los&nbsp;Angeles
+            3 935.8&nbsp;km. Because the Earth is not a sphere, expect up to about 0.3% deviation
+            from ellipsoidal (WGS&nbsp;84) distances &mdash; a few metres per kilometre.</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="endpoint">
+      <div class="sig">
+        <span class="verb get">GET</span>
+        <span class="path">/image</span>
+        <span class="note">binary image</span>
+      </div>
+      <div class="body">
+        <p>Returns the stored photo for a coordinate as raw image bytes &mdash; not JSON, not a URL.
+          The <code>Content-Type</code> follows the stored file, typically
+          <code>image/jpeg</code> or <code>image/png</code>.</p>
+
+        <div class="block">
+          <div class="label">Query parameters</div>
+          <div class="scroll">
+            <table>
+              <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td class="code">latitude</td>
+                  <td>float <span class="req">required</span></td>
+                  <td>Matched with the same 1e-6 degree tolerance as <code>DELETE</code>.</td>
+                </tr>
+                <tr>
+                  <td class="code">longitude</td>
+                  <td>float <span class="req">required</span></td>
+                  <td>As above.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="label">Example request</div>
+          <pre>curl -G https://dawn-trace-ratio-went.trycloudflare.com/image \
+  -H "X-API-Key: &lt;API_KEY&gt;" \
+  -d latitude=25.0330 -d longitude=121.5654 \
+  -o lot.jpg</pre>
+        </div>
+
+        <div class="block">
+          <div class="label">When several records share a coordinate</div>
+          <p><b>The most recent one wins.</b> Uploading twice at the same point leaves both records
+            in <code>/results</code>, but <code>/image</code> only ever returns the newer photo.
+            The older image stays on disk and becomes unreachable through the API.</p>
+        </div>
+
+        <div class="block">
+          <div class="label">404 responses</div>
+          <p>Two different conditions, distinguished by the <code>detail</code> string:
+            <code>"no record at this coordinate"</code> when nothing is stored there, and
+            <code>"record has no stored image"</code> when a record exists but its photo is
+            missing. Records created before image storage existed fall into the second case.</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="endpoint">
+      <div class="sig">
+        <span class="verb del">DELETE</span>
+        <span class="path">/results</span>
+        <span class="note">query parameters</span>
+      </div>
+      <div class="body">
+        <p>Removes every record stored at a coordinate.</p>
+
+        <div class="block">
+          <div class="label">Query parameters</div>
+          <div class="scroll">
+            <table>
+              <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td class="code">latitude</td>
+                  <td>float <span class="req">required</span></td>
+                  <td>The coordinate to clear.</td>
+                </tr>
+                <tr>
+                  <td class="code">longitude</td>
+                  <td>float <span class="req">required</span></td>
+                  <td>As above.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="label">Example request</div>
+          <pre>curl -X DELETE -G https://dawn-trace-ratio-went.trycloudflare.com/results \
+  -H "X-API-Key: &lt;API_KEY&gt;" \
+  -d latitude=25.0330 -d longitude=121.5654</pre>
+        </div>
+
+        <div class="block">
+          <div class="label">200 response</div>
+          <pre>{ "deleted": 7, "remaining": 3 }</pre>
+          <p class="muted">Deleting a coordinate that holds nothing is not an error &mdash; you get
+            <code>200</code> with <code>"deleted": 0</code>. There is no way to delete one record
+            while keeping others at the same coordinate. <b>The stored photos are deleted too</b>,
+            and this cannot be undone.</p>
+        </div>
+
+        <div class="block">
+          <div class="label">Coordinate matching</div>
+          <p>A record matches when <b>both</b> latitude and longitude are within
+            <code>1e-6</code> degrees &mdash; roughly 11&nbsp;cm &mdash; of the values you send. This is a
+            tolerance, not exact equality, so float noise from a JSON round-trip still matches.
+            It is far too tight to act as a radius search: an offset of 1e-4 degrees (about 11&nbsp;m)
+            already matches nothing. Use <code>/nearby</code> to find records, then delete by their
+            exact coordinates.</p>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <section>
+    <h2>Status codes</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Code</th><th>When</th><th>Body</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="code num">200</td>
+            <td>Success</td>
+            <td>Record object (<code>/upload</code>) or array (<code>/results</code>)</td>
+          </tr>
+          <tr>
+            <td class="code num">401</td>
+            <td><code>X-API-Key</code> missing or wrong</td>
+            <td><code>{"detail":"invalid or missing X-API-Key"}</code></td>
+          </tr>
+          <tr>
+            <td class="code num">404</td>
+            <td>Unknown path</td>
+            <td><code>{"detail":"Not Found"}</code></td>
+          </tr>
+          <tr>
+            <td class="code num">405</td>
+            <td>Wrong method, e.g. <code>GET /upload</code></td>
+            <td><code>{"detail":"Method Not Allowed"}</code></td>
+          </tr>
+          <tr>
+            <td class="code num">422</td>
+            <td>A form field or query parameter is missing, not a number, or <code>radius</code> is negative</td>
+            <td>FastAPI validation array &mdash; see below</td>
+          </tr>
+          <tr>
+            <td class="code num">500</td>
+            <td>The model could not decode the uploaded file</td>
+            <td>Plain text <code>Internal Server Error</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="block">
+      <div class="label">422 example &mdash; latitude sent as "abc"</div>
+      <pre>{
+  "detail": [
+    {
+      "type": "float_parsing",
+      "loc": ["body", "latitude"],
+      "msg": "Input should be a valid number, unable to parse string as a number",
+      "input": "abc"
+    }
+  ]
+}</pre>
+    </div>
+
+    <p class="muted">Note the asymmetry: a bad <i>field</i> gives you a structured <code>422</code>,
+      but a bad <i>image</i> gives you an untyped <code>500</code> with a plain-text body. Don't
+      assume error responses are always JSON.</p>
+  </section>
+
+  <section>
+    <h2>Where a record came from</h2>
+    <p>Not every record comes from a photo. Taipei City's open parking feed is imported
+      periodically, so a single <code>/results</code> or <code>/nearby</code> response mixes two
+      kinds of record that you must handle differently. <b>Every record names its origin in
+      <code>source</code>:</b></p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>source</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="code">"photo"</td>
+            <td>A photo was uploaded and the vision model counted the empty spaces.</td>
+          </tr>
+          <tr>
+            <td class="code">"taipei-open-data"</td>
+            <td>Imported from Taipei City's published parking feed; the count is their
+              sensor reading.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>The field is always present and never empty, so switch on it rather than inferring
+      origin from which other fields happen to be filled in.</p>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Field</th><th>Uploaded photo</th><th>Imported feed</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="code">count</td>
+            <td>The model's estimate</td>
+            <td>The city's sensor reading</td>
+          </tr>
+          <tr>
+            <td class="code">image</td>
+            <td>Always present</td>
+            <td><b>Absent</b> &mdash; <code>/image</code> answers 404</td>
+          </tr>
+          <tr>
+            <td class="code">name</td>
+            <td>Whatever you sent, else <code>""</code></td>
+            <td>Car park name, in Chinese</td>
+          </tr>
+          <tr>
+            <td class="code">price</td>
+            <td>Whatever you sent, else <code>""</code></td>
+            <td>Fee description, in Chinese</td>
+          </tr>
+          <tr>
+            <td class="code">total</td>
+            <td>Whatever you sent, else <code>null</code></td>
+            <td>Total car spaces at the site</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p><code>name</code> and <code>price</code> are always present but may be empty strings, and
+      <code>total</code> is always present but may be <code>null</code> &mdash; check for content
+      rather than for the key. <code>image</code> is the one field that can be genuinely absent.</p>
+    <p><code>count</code> and <code>total</code> are never cross-checked on upload: if you send a
+      <code>total</code> smaller than the model's count, both are stored as given. Imported rows
+      are checked, and any where the vacancy exceeds capacity is dropped rather than imported.</p>
+    <p><code>price</code> is <b>free text, not a number</b>. Imported values are the city's own
+      fee paragraph and can run to 300 characters, covering hourly rates, monthly passes,
+      motorcycles and night tariffs at once. Do not try to parse it into a rate; render it, or
+      ignore it.</p>
+
+    <div class="block">
+      <div class="label">What the import covers</div>
+      <p>About 1 050 car parks, all inside Taipei City. The feed lists roughly 1 770. Rows are
+        skipped when they have no live vacancy reading, and also when the reading fails a sanity
+        check against the site's declared car capacity &mdash; the source publishes a few impossible
+        rows (one reports 900 free spaces out of 6) and some bus- or motorcycle-only sites where
+        the car vacancy field does not describe cars. Coordinates are converted from TWD97 to WGS84 during import; the source publishes
+        the car park centroid, so expect the point to sit tens of metres from the actual entrance.</p>
+      <p><b>Every imported record shares one timestamp</b> &mdash; the feed's own publish time, not the
+        moment each lot was measured. A re-import replaces the whole imported set, so those
+        timestamps all move together and the counts jump to the new reading. Imported records are
+        a snapshot, not a history.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Known limits</h2>
+    <p>This is a proof of concept, not a production service. These are not bugs to report &mdash; they
+      are things to design your client around.</p>
+    <ul>
+      <li><b>No upload size limit.</b> The whole file is read into memory. Resize photos client-side
+        before sending.</li>
+      <li><b>No rate limiting.</b> Nothing stops a caller from saturating the model. Be a good
+        neighbour &mdash; serialize your requests.</li>
+      <li><b>Writes can be lost.</b> Storage is a single JSON file rewritten on every upload; two
+        simultaneous uploads can overwrite each other. Avoid concurrent <code>POST</code>s.</li>
+      <li><b>Counts are model estimates.</b> Accuracy has not been measured against labelled
+        ground truth. Treat <code>count</code> as an approximation, not a reading from a sensor.</li>
+      <li><b>Deletes are by coordinate, not by record.</b> <code>DELETE /results</code> clears
+        every record at a point at once. There is no record ID and no way to update one in place &mdash;
+        to replace a reading, delete the coordinate and upload again.</li>
+      <li><b>Imported records can be replaced without warning.</b> A re-import deletes every
+        record with <code>source: "taipei-open-data"</code> and writes fresh ones. Coordinates
+        stay stable, so a <code>DELETE</code> you issued against an imported point comes back on
+        the next import.</li>
+      <li><b>Photos are stored forever, and unevenly.</b> Every upload writes a file that is only
+        removed when its coordinate is deleted. Because <code>/image</code> serves just the newest
+        record at a point, repeated uploads at one coordinate accumulate files no request can reach.</li>
+      <li><b>Search scans everything.</b> <code>/nearby</code> reads the whole file and measures
+        every record on each call. There is no spatial index; it degrades linearly as data grows.</li>
+      <li><b>The host may be offline.</b> The service runs on a single desktop machine behind a
+        tunnel; expect connection failures and retry.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Browser client</h2>
+    <p>Opening the base URL in a browser serves a small mobile page for picking a photo and
+      submitting it. That page is the only unauthenticated route &mdash; <code>GET /</code> returns HTML
+      without a key, so that a phone can load it. It asks for the key once and keeps it in
+      <code>localStorage</code>.</p>
+  </section>
+
+</div>

@@ -1,0 +1,13 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+
+# Runtime data, not source. main.py recreates images/ on startup and
+# read_results() treats a missing results.json as an empty list, so a
+# fresh clone runs without either of these.
+images/
+results.json
+
+# macOS
+.DS_Store

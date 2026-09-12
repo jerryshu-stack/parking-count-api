@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>停車位偵測</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --card: #ffffff; --fg: #16181d; --muted: #6b7280;
+    --line: #e2e4e9; --accent: #2563eb; --accent-fg: #ffffff;
+    --ok: #047857; --ok-bg: #ecfdf5; --err: #b91c1c; --err-bg: #fef2f2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115; --card: #191c22; --fg: #f3f4f6; --muted: #9aa1ad;
+      --line: #2b3039; --accent: #3b82f6; --accent-fg: #ffffff;
+      --ok: #34d399; --ok-bg: #08261d; --err: #f87171; --err-bg: #2a1113;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 20px 16px calc(32px + env(safe-area-inset-bottom));
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  main { max-width: 480px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 14px; margin: 0 0 20px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 16px; margin-bottom: 14px;
+  }
+  label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+  input[type=password], input[type=file] {
+    width: 100%; font-size: 16px; color: var(--fg);
+    background: var(--bg); border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px;
+  }
+  input[type=file] { padding: 10px; }
+  #preview { display: none; width: 100%; border-radius: 10px; margin-top: 12px; }
+  .coords { display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
+  .coords span:first-child { color: var(--muted); }
+  button {
+    width: 100%; min-height: 54px; font-size: 17px; font-weight: 600;
+    color: var(--accent-fg); background: var(--accent);
+    border: 0; border-radius: 12px; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button:disabled { opacity: .45; cursor: default; }
+  #out { margin-top: 14px; }
+  .result, .error { border-radius: 12px; padding: 18px; text-align: center; }
+  .result { background: var(--ok-bg); color: var(--ok); }
+  .error { background: var(--err-bg); color: var(--err); text-align: left; font-size: 14px; }
+  .count { display: block; font-size: 52px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .stamp { color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .head { display: flex; align-items: center; justify-content: space-between; margin: 26px 0 10px; }
+  .head h2 { font-size: 15px; margin: 0; color: var(--muted); }
+  .head button { width: auto; min-height: 34px; padding: 0 14px; font-size: 13px;
+                 background: transparent; color: var(--accent); border: 1px solid var(--line); }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li { display: flex; align-items: center; gap: 14px; padding: 12px 16px;
+       background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 8px; }
+  li b { font-size: 26px; min-width: 48px; text-align: center; font-variant-numeric: tabular-nums; }
+  li .meta { font-size: 12px; color: var(--muted); line-height: 1.45; font-variant-numeric: tabular-nums; }
+  .empty { color: var(--muted); font-size: 14px; text-align: center; padding: 22px 0; }
+  li .grow { flex: 1; min-width: 0; }
+  .del {
+    width: auto; min-height: 32px; padding: 0 12px; font-size: 12px; flex: none;
+    background: transparent; color: var(--err); border: 1px solid var(--line);
+  }
+  .radius { display: flex; gap: 10px; align-items: center; }
+  .radius input {
+    flex: 1; min-width: 0; font-size: 16px; color: var(--fg); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 10px; padding: 12px;
+  }
+  .radius button { width: auto; flex: none; min-height: 46px; padding: 0 18px; font-size: 15px; }
+  .seg { display: flex; gap: 8px; margin-bottom: 12px; }
+  .seg button {
+    flex: 1; min-height: 40px; font-size: 14px; font-weight: 600;
+    background: transparent; color: var(--muted); border: 1px solid var(--line);
+  }
+  .seg button[aria-selected="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  .dist { color: var(--accent); font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <h1>停車位偵測</h1>
+  <p class="sub">選一張停車場照片,送到 Mac Studio 上的模型計算空位數。</p>
+
+  <div class="card">
+    <label for="key">API Key</label>
+    <input type="password" id="key" placeholder="貼上 key,會記在這台手機" autocomplete="off">
+  </div>
+
+  <div class="card">
+    <label for="file">照片</label>
+    <input type="file" id="file" accept="image/*">
+    <img id="preview" alt="預覽">
+  </div>
+
+  <div class="card coords">
+    <span>座標(固定)</span>
+    <span id="coords"></span>
+  </div>
+
+  <button id="go" disabled>計算空位數</button>
+  <div id="out"></div>
+
+  <div class="head">
+    <h2 id="histTitle">紀錄</h2>
+    <button id="refresh" type="button">重新整理</button>
+  </div>
+
+  <div class="seg" role="tablist">
+    <button id="tabAll" type="button" role="tab" aria-selected="true">全部</button>
+    <button id="tabNear" type="button" role="tab" aria-selected="false">附近</button>
+  </div>
+
+  <div class="card radius" id="radiusBox" style="display:none">
+    <input type="number" id="radius" value="1000" min="0" step="100" inputmode="numeric">
+    <span class="muted" style="font-size:14px">公尺</span>
+    <button id="search" type="button">搜尋</button>
+  </div>
+
+  <ul id="hist"></ul>
+</main>
+
+<script>
+  // 固定座標 — 要改地點就改這兩個數字
+  const LATITUDE  = 25.0330;
+  const LONGITUDE = 121.5654;
+
+  const $ = id => document.getElementById(id);
+  $('coords').textContent = LATITUDE.toFixed(4) + ', ' + LONGITUDE.toFixed(4);
+
+  $('key').value = localStorage.getItem('parkingApiKey') || '';
+  let histTimer;
+  $('key').addEventListener('input', e => {
+    localStorage.setItem('parkingApiKey', e.target.value.trim());
+    sync();
+    clearTimeout(histTimer);
+    histTimer = setTimeout(loadHistory, 600);
+  });
+
+  const esc = s => String(s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+
+  let mode = 'all';
+
+  async function loadHistory() {
+    const key = $('key').value.trim();
+    const ul = $('hist'), title = $('histTitle');
+    if (!key) { ul.innerHTML = '<li class="empty">填入 API Key 後顯示</li>'; title.textContent = '紀錄'; return; }
+
+    const near = mode === 'near';
+    const url = near
+      ? '/nearby?' + new URLSearchParams({ latitude: LATITUDE, longitude: LONGITUDE, radius: $('radius').value || 0 })
+      : '/results';
+
+    try {
+      const res = await fetch(url, { headers: { 'X-API-Key': key } });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      let rows = await res.json();
+      if (!near) rows = rows.slice().reverse();   // /results 是舊的在前,/nearby 已按距離排好
+
+      title.textContent = (near ? '附近' : '紀錄') + '(' + rows.length + ')';
+      if (!rows.length) {
+        ul.innerHTML = '<li class="empty">' + (near ? '這個半徑內沒有紀錄' : '還沒有任何紀錄') + '</li>';
+        return;
+      }
+      ul.innerHTML = rows.map(r =>
+        '<li><b>' + esc(r.count) + '</b><span class="meta grow">' +
+        esc(r.timestamp) + '<br>' + esc(r.latitude) + ', ' + esc(r.longitude) +
+        (near ? ' · <span class="dist">' + esc(r.distance_m) + ' m</span>' : '') +
+        '</span><button class="del" type="button" data-lat="' + esc(r.latitude) +
+        '" data-lon="' + esc(r.longitude) + '">刪除</button></li>').join('');
+    } catch (err) {
+      title.textContent = '紀錄';
+      ul.innerHTML = '<li class="empty">讀取失敗:' + esc(err.message) + '</li>';
+    }
+  }
+
+  $('refresh').addEventListener('click', loadHistory);
+
+  $('tabAll').addEventListener('click', () => setMode('all'));
+  $('tabNear').addEventListener('click', () => setMode('near'));
+  $('search').addEventListener('click', loadHistory);
+  $('radius').addEventListener('keydown', e => { if (e.key === 'Enter') loadHistory(); });
+
+  function setMode(m) {
+    mode = m;
+    $('tabAll').setAttribute('aria-selected', m === 'all');
+    $('tabNear').setAttribute('aria-selected', m === 'near');
+    $('radiusBox').style.display = m === 'near' ? 'flex' : 'none';
+    loadHistory();
+  }
+
+  $('hist').addEventListener('click', async e => {
+    const btn = e.target.closest('.del');
+    if (!btn) return;
+    if (!confirm('刪除這個座標上的所有紀錄?')) return;
+    btn.disabled = true;
+    btn.textContent = '刪除中';
+    const q = new URLSearchParams({ latitude: btn.dataset.lat, longitude: btn.dataset.lon });
+    try {
+      const res = await fetch('/results?' + q, {
+        method: 'DELETE',
+        headers: { 'X-API-Key': $('key').value.trim() }
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+    } catch (err) {
+      alert('刪除失敗:' + err.message);
+    }
+    loadHistory();
+  });
+
+  setMode('all');
+
+  $('file').addEventListener('change', e => {
+    const f = e.target.files[0];
+    const img = $('preview');
+    if (f) { img.src = URL.createObjectURL(f); img.style.display = 'block'; }
+    else { img.style.display = 'none'; }
+    $('out').innerHTML = '';
+    sync();
+  });
+
+  function sync() {
+    $('go').disabled = !($('file').files[0] && $('key').value.trim());
+  }
+
+  $('go').addEventListener('click', async () => {
+    const btn = $('go'), out = $('out');
+    btn.disabled = true;
+    btn.textContent = '模型計算中…';
+    out.innerHTML = '';
+
+    const body = new FormData();
+    body.append('image', $('file').files[0]);
+    body.append('latitude', LATITUDE);
+    body.append('longitude', LONGITUDE);
+
+    try {
+      const res = await fetch('/upload', {
+        method: 'POST',
+        headers: { 'X-API-Key': $('key').value.trim() },
+        body
+      });
+      const text = await res.text();
+      if (!res.ok) throw new Error('HTTP ' + res.status + ' — ' + text);
+      const data = JSON.parse(text);
+      out.innerHTML =
+        '<div class="result"><span class="count">' + data.count + '</span>個空位' +
+        '<div class="stamp">' + data.timestamp + '</div></div>';
+    } catch (err) {
+      out.innerHTML = '<div class="error"><b>失敗</b><br>' +
+        err.message.replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])) + '</div>';
+    } finally {
+      btn.textContent = '計算空位數';
+      sync();
+      loadHistory();
+    }
+  });
+</script>
+</body>
+</html>
