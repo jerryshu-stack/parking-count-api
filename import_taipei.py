@@ -1,24 +1,28 @@
-"""Import Taipei City's open parking data into results.json.
+"""Import Taipei City's open parking data into Postgres.
 
 Two feeds are joined on the car park id: one carries the static description
 (including TWD97 coordinates), the other the live vacancy count. Re-running this
 replaces the previously imported rows instead of duplicating them, so it is safe
-to run on a schedule. Rows uploaded through the API are never touched.
+to run on a schedule -- main.py does exactly that in a background thread. Rows
+uploaded through the API (source='photo') are never touched.
 
     PARKING_API_KEY=x .venv/bin/python import_taipei.py
 """
 
-import json
 import urllib.request
+import json
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
+from geoalchemy2.elements import WKTElement
+from sqlalchemy import delete
+
+from db import SessionLocal
+from db_models import ParkingSpot
 from twd97 import to_wgs84
 
 DESC_URL = "https://tcgbusfs.blob.core.windows.net/blobtcmsv/TCMSV_alldesc.json"
 AVAIL_URL = "https://tcgbusfs.blob.core.windows.net/blobtcmsv/TCMSV_allavailable.json"
 
-RESULTS_FILE = Path(__file__).parent / "results.json"
 SOURCE = "taipei-open-data"
 
 # Taipei City, with a little slack. Rejects the handful of rows whose TWD97
@@ -105,20 +109,38 @@ def build_rows() -> tuple:
     return rows, skipped, timestamp
 
 
-def main() -> None:
+def run_import() -> dict:
+    """Fetch, validate, and replace all taipei-open-data rows. Safe to call on a
+    schedule -- delete+insert happens in one transaction, so a concurrent /nearby
+    query never observes a moment with zero open-data rows."""
     rows, skipped, timestamp = build_rows()
 
-    existing = json.loads(RESULTS_FILE.read_text()) if RESULTS_FILE.exists() else []
-    kept = [r for r in existing if r.get("source") != SOURCE]
+    with SessionLocal() as db:
+        db.execute(delete(ParkingSpot).where(ParkingSpot.source == SOURCE))
+        for row in rows:
+            db.add(
+                ParkingSpot(
+                    source=SOURCE,
+                    count=row["count"],
+                    latitude=row["latitude"],
+                    longitude=row["longitude"],
+                    location=WKTElement(f"POINT({row['longitude']} {row['latitude']})", srid=4326),
+                    recorded_at=row["timestamp"],
+                    name=row["name"],
+                    price=row["price"],
+                    total=row["total"],
+                )
+            )
+        db.commit()
 
-    merged = kept + rows
-    merged.sort(key=lambda r: r["timestamp"])
-    RESULTS_FILE.write_text(json.dumps(merged, indent=2, ensure_ascii=False))
+    return {"timestamp": timestamp, "imported": len(rows), "skipped": skipped}
 
-    print(f"feed updated at {timestamp}")
-    print(f"imported {len(rows)} car parks")
-    print(f"skipped  {skipped}")
-    print(f"kept     {len(kept)} local rows; total now {len(merged)}")
+
+def main() -> None:
+    result = run_import()
+    print(f"feed updated at {result['timestamp']}")
+    print(f"imported {result['imported']} car parks")
+    print(f"skipped  {result['skipped']}")
 
 
 if __name__ == "__main__":

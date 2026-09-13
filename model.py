@@ -1,32 +1,34 @@
-"""Parking space counting backed by a local vision model via Ollama."""
+"""Parking space counting delegated to a remote parking-count-api instance.
 
-import re
+The vision model itself runs on someone else's machine (their Ollama + qwen3-vl),
+exposed as their own copy of this same API. We reuse their /upload endpoint purely
+to get a count back; latitude/longitude sent to them are dummy values because only
+their `count` field is used -- whatever record they persist on their own side is
+irrelevant here. When the model moves somewhere we control (e.g. the cloud), this
+is the only function that needs to change.
+"""
 
-import ollama
+import os
 
-MODEL = "qwen3-vl:32b"
+import httpx
 
-PROMPT = "How many empty parking spaces are visible in this image?"
+REMOTE_MODEL_URL = os.environ.get("REMOTE_MODEL_URL")
+REMOTE_MODEL_API_KEY = os.environ.get("REMOTE_MODEL_API_KEY")
 
-# qwen3-vl is a thinking model: left alone it burns thousands of tokens counting
-# out loud and never reaches an answer. Prefilling the assistant turn with a
-# closed <think> block and the start of the sentence forces it straight to a number.
-PREFILL = "<think>\n\n</think>\n\nThe number of empty parking spaces visible is "
+if not REMOTE_MODEL_URL or not REMOTE_MODEL_API_KEY:
+    raise RuntimeError(
+        "REMOTE_MODEL_URL / REMOTE_MODEL_API_KEY environment variables are not set"
+    )
 
 
 def count_parking_spaces(image: bytes) -> int:
     """Return the number of empty parking spaces visible in the image."""
-    response = ollama.chat(
-        model=MODEL,
-        messages=[
-            {"role": "user", "content": PROMPT, "images": [image]},
-            {"role": "assistant", "content": PREFILL},
-        ],
-        options={"temperature": 0, "num_predict": 32},
+    response = httpx.post(
+        f"{REMOTE_MODEL_URL.rstrip('/')}/upload",
+        headers={"X-API-Key": REMOTE_MODEL_API_KEY},
+        files={"image": ("upload.jpg", image, "image/jpeg")},
+        data={"latitude": "0", "longitude": "0"},
+        timeout=120,
     )
-    text = response["message"]["content"]
-
-    match = re.search(r"\d+", text)
-    if not match:
-        raise ValueError(f"model did not return a number: {text!r}")
-    return int(match.group())
+    response.raise_for_status()
+    return response.json()["count"]
