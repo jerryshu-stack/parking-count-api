@@ -13,7 +13,13 @@ from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 import import_taipei
-from auth import PHOTO_UNLOCK_COST, PHOTO_UNLOCK_SECONDS, require_api_key, require_user
+from auth import (
+    PHOTO_UNLOCK_COST,
+    PHOTO_UNLOCK_SECONDS,
+    optional_user,
+    require_api_key,
+    require_user,
+)
 from auth import router as auth_router
 from db import get_db
 from db_models import ParkingSpot, User
@@ -34,6 +40,12 @@ SOURCE_PHOTO = "photo"
 COORD_TOLERANCE = 1e-6
 
 UPLOAD_REWARD = int(os.environ.get("UPLOAD_REWARD", "4"))
+
+# Contributing a photo is itself what opens community reports -- the product model is
+# "share one photo, see what other drivers shared", not "earn a currency and then spend
+# it". Points still accrue in the ledger exactly as before; they are just no longer the
+# thing standing between a contributor and the data. 30 days by default.
+CONTRIBUTION_UNLOCK_SECONDS = int(os.environ.get("CONTRIBUTION_UNLOCK_SECONDS", str(30 * 24 * 3600)))
 
 # How often the Taipei open-data importer re-runs in the background. Adjust freely.
 TAIPEI_IMPORT_INTERVAL_MINUTES = int(os.environ.get("TAIPEI_IMPORT_INTERVAL_MINUTES", "30"))
@@ -136,17 +148,31 @@ async def upload(
     db.flush()  # assigns spot.id for the ledger entry below
 
     balance = award_points(db, user, UPLOAD_REWARD, reason="upload_reward", related_spot_id=spot.id)
+
+    unlock_until = datetime.now(timezone.utc) + timedelta(seconds=CONTRIBUTION_UNLOCK_SECONDS)
+    if user.photo_unlock_until is None or user.photo_unlock_until < unlock_until:
+        user.photo_unlock_until = unlock_until  # extend, never shorten an existing window
     db.commit()
 
     result = _spot_to_dict(spot)
     result["points_balance"] = balance
     result["points_awarded"] = UPLOAD_REWARD
+    result["unlock_until"] = _format_ts(user.photo_unlock_until)
     return result
 
 
 @app.get("/results", dependencies=[Depends(require_api_key)])
-async def get_results(db: Session = Depends(get_db)):
-    rows = db.execute(select(ParkingSpot).order_by(ParkingSpot.recorded_at.asc())).scalars().all()
+async def get_results(
+    user: User | None = Depends(optional_user),
+    db: Session = Depends(get_db),
+):
+    # The device key ships inside the mobile bundle, so it cannot be the only thing
+    # guarding community rows -- otherwise this endpoint hands over exactly what
+    # /nearby and /image charge for. Government rows stay open to any caller.
+    query = select(ParkingSpot).order_by(ParkingSpot.recorded_at.asc())
+    if user is None or not _is_unlocked(user):
+        query = query.where(ParkingSpot.source != SOURCE_PHOTO)
+    rows = db.execute(query).scalars().all()
     return [_spot_to_dict(r) for r in rows]
 
 
@@ -258,6 +284,7 @@ async def get_image(
 async def delete_result(
     latitude: float = Query(...),
     longitude: float = Query(...),
+    user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ):
     matches = db.execute(
@@ -275,6 +302,25 @@ async def delete_result(
 
     remaining = db.execute(select(func.count()).select_from(ParkingSpot)).scalar_one()
     return {"deleted": len(matches), "remaining": remaining}
+
+
+@app.get("/me/contributions", dependencies=[Depends(require_api_key)])
+async def my_contributions(
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+    limit: int = Query(100, ge=1, le=500),
+):
+    """The caller's own photo reports, newest first.
+
+    parking_spots.uploaded_by was already written on every upload but nothing read it.
+    """
+    rows = db.execute(
+        select(ParkingSpot)
+        .where(ParkingSpot.uploaded_by == user.id)
+        .order_by(ParkingSpot.recorded_at.desc())
+        .limit(limit)
+    ).scalars().all()
+    return [_spot_to_dict(r) for r in rows]
 
 
 @app.post("/photo/unlock", dependencies=[Depends(require_api_key)])

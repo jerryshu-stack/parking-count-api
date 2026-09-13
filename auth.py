@@ -58,6 +58,23 @@ def get_bearer_token(authorization: str | None = Header(None)) -> str:
     return authorization.removeprefix("Bearer ").strip()
 
 
+def optional_user(
+    authorization: str | None = Header(None),
+    db: Session = Depends(get_db),
+) -> User | None:
+    """Same lookup as require_user, but returns None instead of raising.
+
+    Used by routes that must keep serving government data to callers without a
+    session while still honouring the unlock rule for community rows.
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    session = db.get(DbSession, hash_token(authorization.removeprefix("Bearer ").strip()))
+    if session is None or session.revoked_at is not None:
+        return None
+    return db.get(User, session.user_id)
+
+
 def require_user(token: str = Depends(get_bearer_token), db: Session = Depends(get_db)) -> User:
     session = db.get(DbSession, hash_token(token))
     if session is None or session.revoked_at is not None:

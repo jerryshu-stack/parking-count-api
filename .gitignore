@@ -11,3 +11,9 @@ results.json
 
 # macOS
 .DS_Store
+
+# Mobile
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/.env

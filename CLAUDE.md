@@ -126,6 +126,33 @@ again in the ordinary course of things.
 Postgres did not change this; storing binary blobs in the database would be worse for this use
 case, not better.
 
+## Mobile app
+
+`mobile/` is the consumer product: Expo + React Native + TypeScript, iOS-first. It is the
+only client that matters now -- `index.html` predates accounts and is broken against the
+current API (it sends no bearer token and still expects `/nearby` to return an array).
+
+Read `mobile/ARCHITECTURE.md` before changing any endpoint: it records which routes the
+app depends on and what their response shapes mean to it. `mobile/README.md` has the run
+instructions, including `devtools/local_model_server.py`, which serves `model.py`'s remote
+contract from a local Ollama so uploads work on a clean machine.
+
+Four backend changes were made for it, all in `main.py`:
+
+* **`/upload` grants the unlock.** Contributing a photo now extends `photo_unlock_until`
+  by `CONTRIBUTION_UNLOCK_SECONDS` (30 days). The points ledger is untouched and still
+  records the award -- points simply stopped being the thing between a contributor and the
+  data. The product is "share a photo, see what others shared", not a currency, and the
+  previous 60-second purchased window expired before a user could read a single result.
+* **`/results` honours the unlock rule.** It was device-key-only and returned every photo
+  row, so the key the app must ship handed over exactly what the gate protects. It now
+  takes an *optional* session and filters photo rows unless unlocked; callers without a
+  session still get government data.
+* **`DELETE /results` requires a session.** It previously let any holder of the device key
+  delete any record and unlink its photo.
+* **`GET /me/contributions` added.** `uploaded_by` was written on every upload and never
+  read; 我的貢獻 needs it.
+
 ## Two kinds of record
 
 `parking_spots` holds rows from two origins, distinguished by `source`:
