@@ -8,14 +8,16 @@ import { Text } from '@/components/Text';
 import { color, radius, space } from '@/theme/tokens';
 import { formatDistance, formatFreshness, isStale, spotTitle } from '@/utils/format';
 import { photoSource } from '@/api/parking';
-import type { NearbySpot } from '@/api/types';
+import type { ParkingSpot } from '@/api/types';
 
 interface Props {
-  spot: NearbySpot;
+  spot: ParkingSpot & { distance_m?: number };
   /** Reverse-geocoded street for community rows, which carry no name. */
   areaName?: string;
   /** Community photos are only fetched once the user may actually see them. */
   canShowPhoto: boolean;
+  /** Suppressed on lists where every row shares one source, where it is noise. */
+  showSource?: boolean;
   onPress: () => void;
 }
 
@@ -35,11 +37,21 @@ export const ParkingRow = React.memo(function ParkingRow({
   spot,
   areaName,
   canShowPhoto,
+  showSource = true,
   onPress,
 }: Props) {
   const fresh = formatFreshness(spot.timestamp);
   const tint = availabilityColor(spot.count);
   const showPhoto = canShowPhoto && spot.source === 'photo' && !!spot.image;
+
+  // Distance leads: in a list sorted by proximity it is the fact being scanned.
+  // Contributions fetched from /me/contributions carry no distance, so each part
+  // is included only when it exists rather than rendering an empty separator.
+  const metaParts = [
+    spot.distance_m !== undefined ? formatDistance(spot.distance_m) : null,
+    fresh,
+    spot.total ? `共 ${spot.total}` : null,
+  ].filter(Boolean) as string[];
 
   return (
     <Pressable
@@ -60,31 +72,15 @@ export const ParkingRow = React.memo(function ParkingRow({
         </Text>
 
         <View style={styles.meta}>
-          <Text variant="meta" tone="secondary">
-            {formatDistance(spot.distance_m)}
+          <Text variant="meta" tone={isStale(spot.timestamp) ? 'tertiary' : 'secondary'}>
+            {metaParts.join(' · ')}
           </Text>
-          {fresh ? (
+          {showSource ? (
             <>
-              <Text variant="meta" tone="tertiary" style={styles.dot}>
-                ·
-              </Text>
-              <Text variant="meta" tone={isStale(spot.timestamp) ? 'tertiary' : 'secondary'}>
-                {fresh}
-              </Text>
+              <View style={styles.spacer} />
+              <SourceLabel source={spot.source} />
             </>
           ) : null}
-          {spot.total ? (
-            <>
-              <Text variant="meta" tone="tertiary" style={styles.dot}>
-                ·
-              </Text>
-              <Text variant="meta" tone="tertiary">
-                共 {spot.total}
-              </Text>
-            </>
-          ) : null}
-          <View style={styles.spacer} />
-          <SourceLabel source={spot.source} />
         </View>
       </View>
 
@@ -120,7 +116,6 @@ const styles = StyleSheet.create({
 
   body: { flex: 1, marginLeft: space.md },
   meta: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  dot: { marginHorizontal: space.xs + 1 },
   spacer: { flex: 1, minWidth: space.sm },
 
   thumb: {

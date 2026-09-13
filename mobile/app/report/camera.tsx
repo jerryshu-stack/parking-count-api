@@ -85,6 +85,8 @@ function Cancel({ onPress, tone }: { onPress: () => void; tone: 'light' | 'dark'
   );
 }
 
+// The two literals below are deliberate: a viewfinder is black and a shutter is
+// white on every camera UI, independent of the app's palette.
 const styles = StyleSheet.create({
   fill: { flex: 1, backgroundColor: color.bg },
   black: { flex: 1, backgroundColor: '#000000' },

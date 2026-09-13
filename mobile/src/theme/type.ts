@@ -85,6 +85,22 @@ export const text = {
     ...numeric,
   } as TextStyle,
 
+  /** Step headings. One notch below a row title -- the steps explain, they do not lead. */
+  stepTitle: {
+    fontSize: 15,
+    lineHeight: 21,
+    fontWeight: '600',
+    letterSpacing: -0.1,
+  } as TextStyle,
+
+  /** Step numerals. Light and quiet -- they order the steps, they are not the point. */
+  stepNumber: {
+    fontSize: 14,
+    lineHeight: 21,
+    fontWeight: '500',
+    ...numeric,
+  } as TextStyle,
+
   /** Numbers inside map markers. */
   marker: {
     fontSize: 13,

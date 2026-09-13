@@ -4,38 +4,58 @@
  */
 
 export const color = {
-  /** Warm off-white. The map is the bright surface; chrome sits slightly below it. */
-  bg: '#FBFAF7',
+  /**
+   * Warm off-white, but with the yellow pulled back: the previous ground was warm
+   * enough that the green sitting on it read as an eco-brand pairing.
+   */
+  bg: '#FAFAF7',
   surface: '#FFFFFF',
-  /** Pressed state for rows and controls. */
-  surfacePressed: '#F2F1EC',
+  surfacePressed: '#F1F1EC',
 
-  ink: '#14171A',
-  inkSecondary: '#5C6166',
-  inkTertiary: '#8A9096',
+  /**
+   * The greys carry a slight green bias rather than being neutral. A pure mid-grey
+   * on a warm ground reads as unconsidered; biasing it toward the accent makes the
+   * whole palette look chosen.
+   */
+  ink: '#16191B',
+  inkSecondary: '#5A625E',
+  inkTertiary: '#8A918C',
   inkInverse: '#FFFFFF',
 
-  /** Very subtle neutral hairline -- warm, so it sits with the background. */
-  hairline: '#E6E4DE',
-  hairlineStrong: '#D8D5CC',
+  hairline: '#E5E4DD',
+  hairlineStrong: '#D6D5CC',
 
-  /** One accent. Restrained urban green: primary actions and available spaces. */
-  accent: '#17693F',
-  accentPressed: '#125533',
-  accentSoft: '#EAF2ED',
+  /**
+   * Deep pine rather than a pure green. Saturated grass-green is the single thing
+   * that made this palette look cheap, and it is worst at large areas -- which is
+   * why the primary button below is ink, not this.
+   */
+  accent: '#12573A',
+  accentSoft: '#EDF2EE',
 
-  /** Semantic availability. Green is the same family as the accent on purpose. */
-  available: '#17693F',
-  /** Only used when availability is genuinely low enough to matter. */
-  low: '#A8641C',
-  /** Only used at zero. */
-  none: '#9A3B32',
+  /**
+   * Primary actions are near-black, not green.
+   *
+   * A full-width saturated green button is decoration: it colours a surface that
+   * carries no meaning, and it competes with the counts, which are the only thing
+   * on screen where green means something. Keeping buttons neutral is what lets a
+   * green number read as information rather than as house style.
+   */
+  primary: '#16191B',
+  primaryPressed: '#2C3033',
+
+  /** Semantic availability. Same family as the accent, deliberately. */
+  available: '#12573A',
+  /** Only when availability is genuinely low enough to matter. */
+  low: '#8E5A15',
+  /** Only at zero. */
+  none: '#8C3228',
 
   /** System blue, reserved for the user's own location. */
   location: '#007AFF',
 
   scrim: 'rgba(12,14,16,0.45)',
-} as const;
+} as const;;
 
 /** 4pt grid. */
 export const space = {

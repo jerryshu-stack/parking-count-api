@@ -1,19 +1,19 @@
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
-import { Image } from 'expo-image';
+import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AvailabilityInline } from '@/components/Availability';
 import { Divider } from '@/components/Divider';
+import { Button } from '@/components/Button';
 import { EmptyState } from '@/components/EmptyState';
 import { Text } from '@/components/Text';
-import { fetchMyContributions, fetchNearby, photoSource } from '@/api/parking';
+import { fetchMyContributions, fetchNearby } from '@/api/parking';
 import { useAuth } from '@/features/auth/AuthContext';
+import { HowItWorks } from '@/features/community/HowItWorks';
+import { ParkingRow, ROW_TEXT_INSET } from '@/features/parking/ParkingRow';
 import { useAreaNames } from '@/hooks/useAreaNames';
 import { FALLBACK_CENTRE, useLocation } from '@/hooks/useLocation';
 import { color, radius, space } from '@/theme/tokens';
-import { formatDistance, formatFreshness, spotTitle } from '@/utils/format';
 import type { NearbySpot, ParkingSpot } from '@/api/types';
 
 type Tab = 'latest' | 'mine';
@@ -72,22 +72,36 @@ export default function CommunityScreen() {
           <ActivityIndicator color={color.inkTertiary} />
         </View>
       ) : tab === 'latest' && !unlocked ? (
-        <EmptyState
-          title="社群即時回報"
-          body="分享一張停車照片，即可查看其他駕駛回報的車位資訊。"
-          actionLabel="拍照回報"
-          onAction={() => router.push('/(tabs)/report')}
-        />
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: insets.bottom + space.xxl }}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.lockedIntro}>
+            <Text variant="heading">還沒有解鎖社群回報</Text>
+            <Text variant="body" tone="secondary" style={styles.lockedBody}>
+              社群回報是其他駕駛剛剛拍下的即時車位。分享一張你看到的車位照片，就能查看全部。
+            </Text>
+          </View>
+
+          <HowItWorks />
+
+          <View style={styles.lockedAction}>
+            <Button label="拍照回報" onPress={() => router.push('/(tabs)/report')} />
+          </View>
+        </ScrollView>
       ) : (
         <FlatList
           data={rows}
           keyExtractor={(item, i) => `${item.latitude},${item.longitude},${item.timestamp},${i}`}
-          ItemSeparatorComponent={() => <Divider inset={space.lg} />}
+          ItemSeparatorComponent={() => <Divider inset={ROW_TEXT_INSET} />}
           contentContainerStyle={{ paddingBottom: insets.bottom + space.xxl }}
+          ListHeaderComponent={tab === 'latest' ? <HowItWorks /> : null}
           renderItem={({ item }) => (
-            <ReportRow
+            <ParkingRow
               spot={item}
               areaName={areaName(item.latitude, item.longitude)}
+              canShowPhoto={unlocked}
+              showSource={false}
               onPress={() =>
                 router.push({
                   pathname: '/spot/[key]',
@@ -137,59 +151,18 @@ function TabButton({
   );
 }
 
-function ReportRow({
-  spot,
-  areaName,
-  onPress,
-}: {
-  spot: ParkingSpot & { distance_m?: number };
-  areaName?: string;
-  onPress: () => void;
-}) {
-  const fresh = formatFreshness(spot.timestamp);
-  return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
-      {spot.image ? (
-        <Image
-          source={photoSource(spot.latitude, spot.longitude)}
-          style={styles.thumb}
-          contentFit="cover"
-          transition={120}
-          cachePolicy="memory-disk"
-          recyclingKey={spot.image}
-        />
-      ) : null}
-      <View style={styles.rowBody}>
-        <Text variant="rowTitle" numberOfLines={1}>
-          {areaName || spotTitle(spot.name, spot.source)}
-        </Text>
-        <View style={styles.rowAvailability}>
-          <AvailabilityInline count={spot.count} />
-        </View>
-        <Text variant="meta" tone="tertiary" style={styles.rowMeta}>
-          {[fresh, spot.distance_m !== undefined ? formatDistance(spot.distance_m) : null]
-            .filter(Boolean)
-            .join(' · ')}
-        </Text>
-      </View>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   fill: { flex: 1, backgroundColor: color.bg },
   title: { paddingHorizontal: space.lg },
   centre: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+
+  lockedIntro: { paddingHorizontal: space.lg, paddingTop: space.lg, paddingBottom: space.base },
+  lockedBody: { marginTop: space.sm },
+  lockedAction: { paddingHorizontal: space.lg, paddingTop: space.xl },
 
   tabs: { flexDirection: 'row', paddingHorizontal: space.lg, marginTop: space.base, gap: space.xl },
   tab: { paddingBottom: space.sm },
   underline: { height: 2, marginTop: space.sm, backgroundColor: 'transparent', borderRadius: 1 },
   underlineActive: { backgroundColor: color.ink },
 
-  row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.lg, paddingVertical: space.md },
-  pressed: { backgroundColor: color.surfacePressed },
-  thumb: { width: 56, height: 56, borderRadius: radius.sm, marginRight: space.md, backgroundColor: color.surfacePressed },
-  rowBody: { flex: 1 },
-  rowAvailability: { marginTop: 3 },
-  rowMeta: { marginTop: 4 },
 });
