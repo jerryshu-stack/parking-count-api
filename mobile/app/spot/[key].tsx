@@ -78,36 +78,38 @@ export default function SpotDetail() {
           <CloseButton onPress={() => router.back()} />
         </View>
 
-        <View style={styles.block}>
-          <Text variant="heading">{spotTitle(spot.name, spot.source)}</Text>
+        <View style={styles.hero}>
+          <View style={styles.heroTop}>
+            <Text variant="heading" style={styles.heroName}>
+              {spotTitle(spot.name, spot.source)}
+            </Text>
+            <SourceLabel source={spot.source} />
+          </View>
 
           {/* Availability is the largest thing on the screen, by a wide margin. */}
           <View style={styles.countRow}>
             <Text variant="display" style={{ color: availabilityColor(spot.count) }}>
               {spot.count}
             </Text>
-            <Text variant="body" tone="secondary" style={styles.countUnit}>
-              {spot.count === 0 ? '目前已滿' : '個空位'}
-            </Text>
+            <View style={styles.countSide}>
+              <Text variant="body" tone="secondary">
+                {spot.count === 0 ? '目前已滿' : '個空位'}
+              </Text>
+              {spot.total !== null ? (
+                <Text variant="meta" tone="tertiary" style={styles.capacity}>
+                  總車位 {spot.total}
+                </Text>
+              ) : null}
+            </View>
           </View>
-
-          {spot.total !== null ? (
-            <Text variant="meta" tone="tertiary">
-              剩餘車位 {spot.count} / 總車位 {spot.total}
-            </Text>
-          ) : null}
         </View>
+
+        <Divider inset={space.lg} />
 
         <View style={styles.factRow}>
           <Fact label="距離" value={formatDistance(metres)} />
           <Fact label="步行" value={formatWalkingTime(metres).replace('步行 ', '')} />
           <Fact label="更新" value={formatFreshnessShort(spot.timestamp) ?? '—'} />
-        </View>
-
-        <Divider inset={space.lg} />
-
-        <View style={styles.sourceRow}>
-          <SourceLabel source={spot.source} />
         </View>
 
         {showPhoto ? (
@@ -199,14 +201,17 @@ const styles = StyleSheet.create({
   block: { paddingHorizontal: space.lg, paddingVertical: space.base },
   blockLabel: { marginBottom: space.xs + 2 },
 
-  countRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: space.md, marginBottom: 2 },
-  countUnit: { marginLeft: space.sm },
+  hero: { paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.lg },
+  heroTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  heroName: { flex: 1, marginRight: space.md },
+  countRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: space.base },
+  countSide: { marginLeft: space.md },
+  capacity: { marginTop: 2 },
 
-  factRow: { flexDirection: 'row', paddingHorizontal: space.lg, paddingBottom: space.base },
+  factRow: { flexDirection: 'row', paddingHorizontal: space.lg, paddingVertical: space.base },
   fact: { flex: 1 },
   factLabel: { marginTop: 2 },
 
-  sourceRow: { paddingHorizontal: space.lg, paddingVertical: space.md },
 
   photo: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius.md, backgroundColor: color.surfacePressed },
 

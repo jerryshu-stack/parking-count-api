@@ -13,7 +13,9 @@ import { RadiusSelector } from '@/features/map/RadiusSelector';
 import { SearchField } from '@/features/map/SearchField';
 import { SearchResults } from '@/features/map/SearchResults';
 import { LockedCommunityNotice } from '@/features/map/LockedCommunityNotice';
-import { ParkingRow } from '@/features/parking/ParkingRow';
+import { ParkingRow, ROW_TEXT_INSET } from '@/features/parking/ParkingRow';
+import { ResultFilter, type ResultFilterValue } from '@/features/parking/ResultFilter';
+import { RowSkeletonList } from '@/features/parking/RowSkeleton';
 import { regionForRadius, thinSpots, type Region } from '@/features/map/thinning';
 import { useAuth } from '@/features/auth/AuthContext';
 import { FALLBACK_CENTRE, useLocation, type Coords } from '@/hooks/useLocation';
@@ -40,6 +42,7 @@ export default function MapScreen() {
   const [region, setRegion] = useState<Region | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [destination, setDestination] = useState<Place | null>(null);
+  const [filter, setFilter] = useState<ResultFilterValue>('all');
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Place[] | null>(null);
@@ -70,10 +73,17 @@ export default function MapScreen() {
     }, [refresh, reload]),
   );
 
-  const spots = data?.spots ?? [];
+  const allSpots = data?.spots ?? [];
+  const communityCount = allSpots.filter((s) => s.source === 'photo').length;
+  const spots =
+    filter === 'available'
+      ? allSpots.filter((s) => s.count > 0)
+      : filter === 'community'
+        ? allSpots.filter((s) => s.source === 'photo')
+        : allSpots;
   // Only community rows lack a name, so only they need resolving.
-  const areaName = useAreaNames(spots.filter((s) => s.source === 'photo'));
-  const markers = useMemo(() => thinSpots(spots, region), [spots, region]);
+  const areaName = useAreaNames(allSpots.filter((s) => s.source === 'photo'));
+  const markers = useMemo(() => thinSpots(allSpots, region), [allSpots, region]);
 
   const recentre = useCallback(async () => {
     const coords = location.coords ?? (await location.request());
@@ -198,12 +208,20 @@ export default function MapScreen() {
         backgroundStyle={styles.sheetBg}
       >
         <View style={styles.sheetHeader}>
-          <Text variant="heading">附近車位</Text>
+          <View style={styles.sheetTitleRow}>
+            <Text variant="heading">附近車位</Text>
+            <Text variant="meta" tone="tertiary">
+              {loading ? '更新中' : `${spots.length} 個地點`}
+            </Text>
+          </View>
           <Text variant="meta" tone="tertiary" style={styles.sheetSub}>
             {destination ? `${destination.title} · ` : ''}
             {radiusLabel(radiusMetres)}內 · 依距離排序
           </Text>
         </View>
+
+        <ResultFilter value={filter} onChange={setFilter} communityCount={communityCount} />
+        <Divider />
 
         {lockedCount > 0 ? (
           <LockedCommunityNotice
@@ -223,13 +241,11 @@ export default function MapScreen() {
               onPress={() => openSpot(item)}
             />
           )}
-          ItemSeparatorComponent={() => <Divider inset={space.lg} />}
+          ItemSeparatorComponent={() => <Divider inset={ROW_TEXT_INSET} />}
           contentContainerStyle={{ paddingBottom: tabBarHeight + space.lg }}
           ListEmptyComponent={
             loading ? (
-              <View style={styles.listLoading}>
-                <ActivityIndicator color={color.inkTertiary} />
-              </View>
+              <RowSkeletonList />
             ) : (
               <EmptyState
                 title={error ?? '附近暫時沒有停車資訊'}
@@ -281,6 +297,7 @@ const styles = StyleSheet.create({
   sheetBg: { backgroundColor: color.surface },
   handle: { backgroundColor: color.hairlineStrong, width: 36 },
   sheetHeader: { paddingHorizontal: space.lg, paddingBottom: space.md },
+  sheetTitleRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   sheetSub: { marginTop: 2 },
   listLoading: { paddingVertical: space.xxl, alignItems: 'center' },
 });

@@ -197,7 +197,13 @@ const styles = StyleSheet.create({
   form: { marginTop: space.xl },
   gap: { height: space.base },
   fieldLabel: { marginBottom: space.xs + 2 },
-  input: { ...type.body, color: color.ink, paddingVertical: space.xs + 2, paddingHorizontal: 0 },
+  input: {
+    ...type.input,
+    color: color.ink,
+    minHeight: 40,
+    paddingVertical: space.sm,
+    paddingHorizontal: 0,
+  },
   rule: { height: StyleSheet.hairlineWidth, backgroundColor: color.hairlineStrong },
 
   error: { marginTop: space.base, color: color.none },

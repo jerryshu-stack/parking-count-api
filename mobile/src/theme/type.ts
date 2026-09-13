@@ -75,12 +75,32 @@ export const text = {
     fontWeight: '400',
   } as TextStyle,
 
+  /** The count in a list row's leading rail. Deliberately far larger than the
+   *  title beside it: the name identifies a lot, the number decides it. */
+  railCount: {
+    fontSize: 25,
+    lineHeight: 29,
+    fontWeight: '700',
+    letterSpacing: -0.8,
+    ...numeric,
+  } as TextStyle,
+
   /** Numbers inside map markers. */
   marker: {
     fontSize: 13,
     lineHeight: 16,
     fontWeight: '700',
     ...numeric,
+  } as TextStyle,
+
+  /**
+   * Text inside a TextInput. Never give an input a lineHeight -- iOS applies it as a
+   * hard line box and crops descenders and the bottom of Chinese characters. Height
+   * comes from the field's own padding instead.
+   */
+  input: {
+    fontSize: 16,
+    fontWeight: '400',
   } as TextStyle,
 
   button: {

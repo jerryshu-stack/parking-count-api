@@ -68,7 +68,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md,
     ...elevation.floating,
   },
-  input: { flex: 1, marginLeft: space.sm, color: color.ink, ...text.body, padding: 0 },
+  input: {
+    flex: 1,
+    marginLeft: space.sm,
+    color: color.ink,
+    ...text.input,
+    paddingVertical: 0,
+    height: '100%',
+  },
   // Drawn rather than imported: one glyph is not worth an icon dependency.
   glyph: { width: 15, height: 15, justifyContent: 'center', alignItems: 'center' },
   lens: {
