@@ -1,18 +1,18 @@
-import * as ImageManipulator from 'expo-image-manipulator';
+import * as FileSystem from 'expo-file-system/legacy';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
 /**
- * Shrink a camera photo before it is uploaded.
+ * Shrink a camera photo before it is uploaded, and confirm the result is a file
+ * that can actually be read back.
  *
- * A modern iPhone shoots ~12 MP, which is several megabytes of JPEG. Sending that
- * untouched is wrong three times over: it is slow on a phone network, it is stored
- * forever at full size, and the vision model has to downscale it anyway before it
- * can look at it -- so the only thing the extra pixels buy is latency.
+ * A modern phone shoots ~12 MP, several megabytes of JPEG. The vision model
+ * downscales it before it looks at it, so the extra pixels buy nothing but upload
+ * time and storage -- a full-size upload was measured end to end at 36 seconds.
  *
- * 1600px on the long edge is well above what the model needs to count cars in a
- * lot, and lands around 200-400 KB.
+ * Uses the contextual API; `manipulateAsync` is deprecated as of SDK 52.
  *
- * Failure here is not fatal: if manipulation fails for any reason the original URI
- * is returned and the upload proceeds as before.
+ * Returns the original URI if anything here fails: a smaller photo is an
+ * optimisation, and it must never be the reason a report cannot be sent.
  */
 
 const MAX_EDGE = 1600;
@@ -20,13 +20,20 @@ const QUALITY = 0.6;
 
 export async function preparePhoto(uri: string): Promise<string> {
   try {
-    const result = await ImageManipulator.manipulateAsync(
-      uri,
-      [{ resize: { width: MAX_EDGE } }],
-      { compress: QUALITY, format: ImageManipulator.SaveFormat.JPEG },
-    );
-    return result.uri;
-  } catch {
+    const context = ImageManipulator.manipulate(uri);
+    context.resize({ width: MAX_EDGE });
+    const image = await context.renderAsync();
+    const saved = await image.saveAsync({ compress: QUALITY, format: SaveFormat.JPEG });
+
+    // A URI that exists but is empty would fail inside fetch with an opaque
+    // network error, so it is cheaper to find out here.
+    const info = await FileSystem.getInfoAsync(saved.uri);
+    if (!info.exists || !('size' in info) || !info.size) return uri;
+
+    console.log(`[parktogether] photo prepared: ${Math.round(info.size / 1024)} KB`);
+    return saved.uri;
+  } catch (e) {
+    console.error(`[parktogether] photo prepare failed, sending original -- ${String(e)}`);
     return uri;
   }
 }

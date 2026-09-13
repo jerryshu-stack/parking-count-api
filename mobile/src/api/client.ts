@@ -109,7 +109,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       body: payload,
       signal: controller.signal,
     });
-  } catch {
+  } catch (cause) {
+    const reason = cause instanceof Error ? `${cause.name}: ${cause.message}` : String(cause);
+    console.error(`[parktogether] ${method} ${path} failed -- ${reason}`);
     throw new ApiError('network', 0, '連線失敗，請稍後再試');
   } finally {
     clearTimeout(timer);
