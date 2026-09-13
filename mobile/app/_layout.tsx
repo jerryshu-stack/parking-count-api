@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from '@/features/auth/AuthContext';
+import { installErrorReporting } from '@/features/diagnostics/reportErrors';
 import { color } from '@/theme/tokens';
 
 function RootNavigator() {
@@ -38,6 +39,8 @@ function RootNavigator() {
     </Stack>
   );
 }
+
+installErrorReporting();
 
 export default function RootLayout() {
   return (

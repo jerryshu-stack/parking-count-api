@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { StyleSheet } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 
@@ -13,21 +13,32 @@ import type { MapCanvasProps } from './shared';
  * hierarchy are what local users already read.
  */
 export function MapCanvas({
-  region,
+  initialRegion,
+  focus,
   destination,
   spots,
   selectedKey,
   showsUserLocation,
-  onRegionChange,
+  onViewportChange,
   onSelect,
   onPressMap,
 }: MapCanvasProps) {
+  const map = useRef<MapView>(null);
+
+  // Animating on demand, rather than binding `region`, is deliberate: a controlled
+  // region prop fed by onRegionChangeComplete re-applies the region on every pan,
+  // so the map animates back under the user's finger and never settles.
+  useEffect(() => {
+    if (focus) map.current?.animateToRegion(focus, 350);
+  }, [focus]);
+
   return (
     <MapView
+      ref={map}
       provider={PROVIDER_DEFAULT}
       style={StyleSheet.absoluteFill}
-      region={region}
-      onRegionChangeComplete={onRegionChange}
+      initialRegion={initialRegion}
+      onRegionChangeComplete={onViewportChange}
       onPress={onPressMap}
       showsUserLocation={showsUserLocation}
       showsMyLocationButton={false}

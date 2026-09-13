@@ -12,7 +12,6 @@ import { SourceLabel } from '@/components/SourceLabel';
 import { Text } from '@/components/Text';
 import { photoSource } from '@/api/parking';
 import { useAuth } from '@/features/auth/AuthContext';
-import { SpotMapPreview } from '@/features/parking/SpotMapPreview';
 import { useSpot } from '@/hooks/useSpot';
 import { color, radius, space } from '@/theme/tokens';
 import {
@@ -145,12 +144,6 @@ export default function SpotDetail() {
           </>
         ) : null}
 
-        <View style={styles.preview}>
-          <SpotMapPreview
-            spot={spot}
-            onPress={() => openDirections(spot.latitude, spot.longitude, spot.name || undefined)}
-          />
-        </View>
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + space.md }]}>
@@ -216,7 +209,6 @@ const styles = StyleSheet.create({
   photo: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius.md, backgroundColor: color.surfacePressed },
 
   more: { marginTop: space.sm },
-  preview: { paddingTop: space.base },
 
   footer: {
     paddingHorizontal: space.lg,

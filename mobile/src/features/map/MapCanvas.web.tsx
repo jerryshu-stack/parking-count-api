@@ -35,13 +35,15 @@ function zoomFor(latitudeDelta: number, heightPx: number) {
 }
 
 export function MapCanvas({
-  region,
+  initialRegion,
+  focus,
   destination,
   spots,
   selectedKey,
   onSelect,
   onPressMap,
 }: MapCanvasProps) {
+  const region = focus ?? initialRegion;
   const [size, setSize] = useState({ width: 390, height: 700 });
   const container = useRef<View>(null);
 

@@ -17,20 +17,27 @@ export default function CameraScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const camera = useRef<CameraView>(null);
   const [busy, setBusy] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   const capture = useCallback(async () => {
-    if (busy) return;
+    if (busy || !ready) return;
     setBusy(true);
+    setFailed(false);
     try {
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      const photo = await camera.current?.takePictureAsync({ quality: 0.7, skipProcessing: true });
+      const photo = await camera.current?.takePictureAsync({ quality: 0.7 });
       if (photo?.uri) {
         router.replace({ pathname: '/report/review', params: { uri: photo.uri } });
+        return;
       }
+      setFailed(true);
+    } catch {
+      setFailed(true);
     } finally {
       setBusy(false);
     }
-  }, [busy, router]);
+  }, [busy, ready, router]);
 
   if (!permission) return <View style={styles.black} />;
 
@@ -54,7 +61,12 @@ export default function CameraScreen() {
 
   return (
     <View style={styles.black}>
-      <CameraView ref={camera} style={StyleSheet.absoluteFill} facing="back" />
+      <CameraView
+        ref={camera}
+        style={StyleSheet.absoluteFill}
+        facing="back"
+        onCameraReady={() => setReady(true)}
+      />
 
       <View style={[styles.top, { paddingTop: insets.top + space.sm }]}>
         <Cancel onPress={() => router.back()} tone="light" />
@@ -62,13 +74,17 @@ export default function CameraScreen() {
 
       <View style={[styles.shutterBar, { paddingBottom: insets.bottom + space.xl }]}>
         <Text variant="meta" style={styles.hint}>
-          把車位拍進畫面即可
+          {failed ? '拍攝失敗，請再按一次' : ready ? '把車位拍進畫面即可' : '相機準備中…'}
         </Text>
         <Pressable
           onPress={capture}
-          disabled={busy}
+          disabled={busy || !ready}
           accessibilityLabel="拍照"
-          style={({ pressed }) => [styles.shutterRing, pressed && styles.shutterPressed]}
+          style={({ pressed }) => [
+            styles.shutterRing,
+            !ready && styles.shutterDisabled,
+            pressed && styles.shutterPressed,
+          ]}
         >
           <View style={styles.shutterCore} />
         </Pressable>
@@ -107,5 +123,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   shutterPressed: { opacity: 0.6 },
+  shutterDisabled: { opacity: 0.35 },
   shutterCore: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#FFFFFF' },
 });

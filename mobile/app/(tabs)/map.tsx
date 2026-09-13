@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -39,7 +39,11 @@ export default function MapScreen() {
 
   const [centre, setCentre] = useState<Coords | null>(null);
   const [radiusMetres, setRadiusMetres] = useState(1000);
-  const [region, setRegion] = useState<Region | null>(null);
+  /** Deliberate moves only. Handing this back to the map on every pan is what
+   *  made it animate under the user's finger. */
+  const [focus, setFocus] = useState<Region | null>(null);
+  /** Where the map actually ended up. Feeds marker thinning, never the map. */
+  const [viewport, setViewport] = useState<Region | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [destination, setDestination] = useState<Place | null>(null);
   const [filter, setFilter] = useState<ResultFilterValue>('all');
@@ -58,7 +62,7 @@ export default function MapScreen() {
       const coords = await location.request();
       const next = coords ?? FALLBACK_CENTRE;
       setCentre(next);
-      setRegion(regionForRadius(next.latitude, next.longitude, 1000));
+      setFocus(regionForRadius(next.latitude, next.longitude, 1000));
     })();
   }, []);
 
@@ -83,20 +87,20 @@ export default function MapScreen() {
         : allSpots;
   // Only community rows lack a name, so only they need resolving.
   const areaName = useAreaNames(allSpots.filter((s) => s.source === 'photo'));
-  const markers = useMemo(() => thinSpots(allSpots, region), [allSpots, region]);
+  const markers = useMemo(() => thinSpots(allSpots, viewport ?? focus), [allSpots, viewport, focus]);
 
   const recentre = useCallback(async () => {
     const coords = location.coords ?? (await location.request());
     if (!coords) return;
     setDestination(null);
     setCentre(coords);
-    setRegion(regionForRadius(coords.latitude, coords.longitude, radiusMetres));
+    setFocus(regionForRadius(coords.latitude, coords.longitude, radiusMetres));
   }, [location, radiusMetres]);
 
   const changeRadius = useCallback(
     (metres: number) => {
       setRadiusMetres(metres);
-      if (centre) setRegion(regionForRadius(centre.latitude, centre.longitude, metres));
+      if (centre) setFocus(regionForRadius(centre.latitude, centre.longitude, metres));
     },
     [centre],
   );
@@ -118,7 +122,7 @@ export default function MapScreen() {
     (place: Place) => {
       setDestination(place);
       setCentre({ latitude: place.latitude, longitude: place.longitude });
-      setRegion(regionForRadius(place.latitude, place.longitude, radiusMetres));
+      setFocus(regionForRadius(place.latitude, place.longitude, radiusMetres));
       setResults(null);
       setQuery('');
     },
@@ -144,9 +148,10 @@ export default function MapScreen() {
 
   return (
     <View style={styles.fill}>
-      {region ? (
+      {focus ? (
         <MapCanvas
-          region={region}
+          initialRegion={focus}
+          focus={focus}
           destination={
             destination
               ? { latitude: destination.latitude, longitude: destination.longitude }
@@ -155,7 +160,7 @@ export default function MapScreen() {
           spots={markers}
           selectedKey={selected}
           showsUserLocation={location.status === 'granted'}
-          onRegionChange={setRegion}
+          onViewportChange={setViewport}
           onSelect={(spot) => {
             setSelected(spotKey(spot));
             openSpot(spot);
@@ -248,9 +253,6 @@ export default function MapScreen() {
           )}
           ItemSeparatorComponent={() => <Divider inset={ROW_TEXT_INSET} />}
           contentContainerStyle={{ paddingBottom: tabBarHeight + space.lg }}
-          refreshControl={
-            <RefreshControl refreshing={loading} onRefresh={reload} tintColor={color.inkTertiary} />
-          }
           ListEmptyComponent={
             loading ? (
               <RowSkeletonList />

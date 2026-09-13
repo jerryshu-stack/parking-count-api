@@ -10,13 +10,21 @@ import type { Region } from './thinning';
  */
 
 export interface MapCanvasProps {
-  region: Region;
+  /** Frames the map once, on mount. Never re-applied. */
+  initialRegion: Region;
+  /**
+   * A deliberate move -- recentre, radius change, chosen destination. Animated to
+   * whenever its identity changes. Panning by hand does not produce one, which is
+   * what keeps the map from fighting the user.
+   */
+  focus: Region | null;
   /** Marks a searched destination, so the map says where it just moved to. */
   destination: { latitude: number; longitude: number } | null;
   spots: NearbySpot[];
   selectedKey: string | null;
   showsUserLocation: boolean;
-  onRegionChange: (region: Region) => void;
+  /** Reports where the map ended up, for marker thinning only. */
+  onViewportChange: (region: Region) => void;
   onSelect: (spot: NearbySpot) => void;
   onPressMap: () => void;
 }
