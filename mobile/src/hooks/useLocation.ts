@@ -30,9 +30,25 @@ export function useLocation() {
         if (mounted.current) setStatus('denied');
         return null;
       }
-      const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
+      // The OS cache answers instantly and is accurate enough to pin a car park.
+      // A cold getCurrentPositionAsync can take many seconds indoors, or hang --
+      // which is what left the report screen with no coordinate and a submit
+      // button that silently did nothing.
+      const cached = await Location.getLastKnownPositionAsync({ maxAge: 5 * 60_000 });
+
+      const fresh = cached
+        ? null
+        : await Promise.race([
+            Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+            new Promise<null>((resolve) => setTimeout(() => resolve(null), 10_000)),
+          ]);
+
+      const position = cached ?? fresh;
+      if (!position) {
+        if (mounted.current) setStatus('unavailable');
+        return null;
+      }
+
       const next = {
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,

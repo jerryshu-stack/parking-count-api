@@ -11,6 +11,7 @@ import { Text } from '@/components/Text';
 import { ApiError } from '@/api/client';
 import { uploadReport } from '@/api/parking';
 import { useAuth } from '@/features/auth/AuthContext';
+import { preparePhoto } from '@/features/contribution/preparePhoto';
 import { describeArea, useLocation, type Coords } from '@/hooks/useLocation';
 import { color, radius, space } from '@/theme/tokens';
 
@@ -50,11 +51,16 @@ export default function ReviewScreen() {
   const wasLocked = !unlocked;
 
   const submit = useCallback(async () => {
-    if (!coords || !uri) return;
+    if (!uri) return;
+    if (!coords) {
+      setPhase({ state: 'failed', message: '還沒有取得位置，請先允許定位再送出' });
+      return;
+    }
     setPhase({ state: 'uploading' });
     try {
+      const prepared = await preparePhoto(uri);
       const result = await uploadReport({
-        uri,
+        uri: prepared,
         latitude: coords.latitude,
         longitude: coords.longitude,
       });
@@ -62,9 +68,11 @@ export default function ReviewScreen() {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setPhase({ state: 'done', count: result.count, unlockedNow: wasLocked });
     } catch (e) {
+      const detail = e instanceof ApiError ? `${e.kind} ${e.status}` : String(e);
+      console.error(`[parktogether] upload failed: ${detail}`);
       const message =
         e instanceof ApiError && e.kind === 'network'
-          ? '照片上傳失敗，請再試一次'
+          ? '照片上傳失敗，請確認與伺服器的連線'
           : '照片分析失敗，請換個角度再拍一次';
       setPhase({ state: 'failed', message });
     }
