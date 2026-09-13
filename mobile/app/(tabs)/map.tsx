@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -147,6 +147,11 @@ export default function MapScreen() {
       {region ? (
         <MapCanvas
           region={region}
+          destination={
+            destination
+              ? { latitude: destination.latitude, longitude: destination.longitude }
+              : null
+          }
           spots={markers}
           selectedKey={selected}
           showsUserLocation={location.status === 'granted'}
@@ -243,6 +248,9 @@ export default function MapScreen() {
           )}
           ItemSeparatorComponent={() => <Divider inset={ROW_TEXT_INSET} />}
           contentContainerStyle={{ paddingBottom: tabBarHeight + space.lg }}
+          refreshControl={
+            <RefreshControl refreshing={loading} onRefresh={reload} tintColor={color.inkTertiary} />
+          }
           ListEmptyComponent={
             loading ? (
               <RowSkeletonList />

@@ -59,7 +59,11 @@ export const color = {
 
 /** 4pt grid. */
 export const space = {
+  /** Hairline gaps inside small chips. */
+  hair: 2,
   xs: 4,
+  /** Tight padding for marker-sized elements. */
+  tight: 6,
   sm: 8,
   md: 12,
   base: 16,

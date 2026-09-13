@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 
+import { DestinationPin } from './DestinationPin';
 import { SpotMarker } from './SpotMarker';
 import { spotKey } from './shared';
 import type { MapCanvasProps } from './shared';
@@ -13,6 +14,7 @@ import type { MapCanvasProps } from './shared';
  */
 export function MapCanvas({
   region,
+  destination,
   spots,
   selectedKey,
   showsUserLocation,
@@ -34,6 +36,12 @@ export function MapCanvas({
       rotateEnabled={false}
       pitchEnabled={false}
     >
+      {destination ? (
+        <Marker coordinate={destination} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
+          <DestinationPin />
+        </Marker>
+      ) : null}
+
       {spots.map((spot) => {
         const key = spotKey(spot);
         return (

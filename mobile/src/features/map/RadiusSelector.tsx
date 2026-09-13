@@ -43,10 +43,10 @@ export function RadiusSelector({ value, onChange }: Props) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: space.xs + 1 },
+  row: { flexDirection: 'row', gap: space.tight },
   chip: {
-    paddingHorizontal: space.sm + 2,
-    paddingVertical: space.xs + 1,
+    paddingHorizontal: space.md,
+    paddingVertical: space.tight,
     borderRadius: r.sm + 2,
     backgroundColor: 'rgba(255,255,255,0.92)',
   },

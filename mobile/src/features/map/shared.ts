@@ -11,6 +11,8 @@ import type { Region } from './thinning';
 
 export interface MapCanvasProps {
   region: Region;
+  /** Marks a searched destination, so the map says where it just moved to. */
+  destination: { latitude: number; longitude: number } | null;
   spots: NearbySpot[];
   selectedKey: string | null;
   showsUserLocation: boolean;

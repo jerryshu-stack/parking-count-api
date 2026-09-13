@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
   },
 
   block: { paddingHorizontal: space.lg, paddingVertical: space.base },
-  blockLabel: { marginBottom: space.xs + 2 },
+  blockLabel: { marginBottom: space.tight },
 
   hero: { paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.lg },
   heroTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

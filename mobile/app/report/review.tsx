@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,14 +31,20 @@ export default function ReviewScreen() {
   const [area, setArea] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>({ state: 'ready' });
 
-  // The coordinate is for the backend; the user sees the place name instead.
+  // A report without a coordinate is meaningless, so this blocks submission -- but
+  // it has to say so rather than leaving the button greyed out with no reason.
+  const locationFailed = location.status === 'denied' || location.status === 'unavailable';
+
+  /** The coordinate is for the backend; the user sees the place name instead. */
+  const resolveLocation = useCallback(async () => {
+    const next = await location.request();
+    if (!next) return;
+    setCoords(next);
+    setArea(await describeArea(next));
+  }, [location]);
+
   useEffect(() => {
-    (async () => {
-      const next = await location.request();
-      if (!next) return;
-      setCoords(next);
-      setArea(await describeArea(next));
-    })();
+    void resolveLocation();
   }, []);
 
   const wasLocked = !unlocked;
@@ -52,6 +59,7 @@ export default function ReviewScreen() {
         longitude: coords.longitude,
       });
       await refresh();
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setPhase({ state: 'done', count: result.count, unlockedNow: wasLocked });
     } catch (e) {
       const message =
@@ -111,10 +119,16 @@ export default function ReviewScreen() {
         <Image source={{ uri }} style={styles.preview} contentFit="cover" transition={120} />
 
         <View style={styles.locationRow}>
-          <View style={styles.pin} />
-          <Text variant="meta" tone="secondary" numberOfLines={1} style={styles.locationText}>
-            {area ?? (coords ? '已取得目前位置' : '正在取得位置…')}
-          </Text>
+          <View style={[styles.pin, locationFailed && styles.pinBlocked]} />
+          {locationFailed ? (
+            <Text variant="meta" numberOfLines={2} style={[styles.locationText, styles.blocked]}>
+              無法取得目前位置，回報需要知道車位在哪裡。
+            </Text>
+          ) : (
+            <Text variant="meta" tone="secondary" numberOfLines={1} style={styles.locationText}>
+              {area ?? (coords ? '已取得目前位置' : '正在取得位置…')}
+            </Text>
+          )}
         </View>
 
         {phase.state === 'failed' ? (
@@ -135,9 +149,11 @@ export default function ReviewScreen() {
         ) : (
           <>
             <Button
-              label={phase.state === 'failed' ? '再試一次' : '送出回報'}
-              onPress={submit}
-              disabled={!coords}
+              label={
+                locationFailed ? '重新取得位置' : phase.state === 'failed' ? '再試一次' : '送出回報'
+              }
+              onPress={locationFailed ? resolveLocation : submit}
+              disabled={!coords && !locationFailed}
             />
             <Button
               label="重新拍攝"
@@ -176,6 +192,8 @@ const styles = StyleSheet.create({
     marginRight: space.sm,
   },
   locationText: { flex: 1 },
+  blocked: { color: color.none },
+  pinBlocked: { borderColor: color.none },
   error: { marginTop: space.md, color: color.none },
 
   result: { flex: 1, paddingHorizontal: space.xl },

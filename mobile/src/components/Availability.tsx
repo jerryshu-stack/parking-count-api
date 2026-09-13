@@ -30,5 +30,5 @@ export function AvailabilityInline({ count }: { count: number }) {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'baseline' },
   count: { fontVariant: ['tabular-nums'] },
-  unit: { marginLeft: space.xs + 1 },
+  unit: { marginLeft: space.tight },
 });

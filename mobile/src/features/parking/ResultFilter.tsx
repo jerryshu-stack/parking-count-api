@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
   item: { paddingBottom: space.sm },
   underline: {
     height: 2,
-    marginTop: space.xs + 1,
+    marginTop: space.tight,
     borderRadius: radius.sm,
     backgroundColor: 'transparent',
   },

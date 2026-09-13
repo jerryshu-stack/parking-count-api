@@ -95,7 +95,6 @@ export const ParkingRow = React.memo(function ParkingRow({
         />
       ) : null}
 
-      <View style={styles.chevron} />
     </Pressable>
   );
 });
@@ -107,7 +106,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: space.md + 1,
+    paddingVertical: space.md,
     paddingHorizontal: space.lg,
   },
   pressed: { backgroundColor: color.surfacePressed },
@@ -126,13 +125,4 @@ const styles = StyleSheet.create({
     backgroundColor: color.surfacePressed,
   },
 
-  chevron: {
-    width: 7,
-    height: 7,
-    marginLeft: space.md,
-    borderTopWidth: 1.5,
-    borderRightWidth: 1.5,
-    borderColor: color.inkTertiary,
-    transform: [{ rotate: '45deg' }],
-  },
 });

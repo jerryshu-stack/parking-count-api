@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
   chip: {
     minWidth: 28,
     height: 23,
-    paddingHorizontal: space.xs + 2,
+    paddingHorizontal: space.tight,
     borderRadius: radius.sm,
     borderWidth: 1.3,
     backgroundColor: color.surface,

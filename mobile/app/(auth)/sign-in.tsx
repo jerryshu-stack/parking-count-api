@@ -188,15 +188,15 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
     paddingHorizontal: space.xl,
-    paddingTop: space.lg + space.xs,
+    paddingTop: space.xl,
   },
 
   brand: { letterSpacing: -0.6 },
-  tagline: { marginTop: space.xs + 2 },
+  tagline: { marginTop: space.tight },
 
   form: { marginTop: space.xl },
   gap: { height: space.base },
-  fieldLabel: { marginBottom: space.xs + 2 },
+  fieldLabel: { marginBottom: space.tight },
   input: {
     ...type.input,
     color: color.ink,

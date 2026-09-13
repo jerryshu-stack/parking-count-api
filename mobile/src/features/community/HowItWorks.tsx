@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
     borderBottomColor: color.hairline,
   },
   eyebrow: { marginBottom: space.md },
-  steps: { gap: space.md + 1 },
+  steps: { gap: space.md },
   step: { flexDirection: 'row' },
   // Fixed width so the three numerals form a column and the bodies align, the
   // same rail idea the parking rows use.

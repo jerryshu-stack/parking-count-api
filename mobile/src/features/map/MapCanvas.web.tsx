@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 
+import { DestinationPin } from './DestinationPin';
 import { SpotMarker } from './SpotMarker';
 import { spotKey, type MapCanvasProps } from './shared';
 import { color } from '@/theme/tokens';
@@ -35,6 +36,7 @@ function zoomFor(latitudeDelta: number, heightPx: number) {
 
 export function MapCanvas({
   region,
+  destination,
   spots,
   selectedKey,
   onSelect,
@@ -99,6 +101,17 @@ export function MapCanvas({
         </View>
       </Pressable>
 
+      {destination
+        ? (() => {
+            const d = project(destination.latitude, destination.longitude);
+            return (
+              <View pointerEvents="none" style={[styles.destination, { left: d.left, top: d.top }]}>
+                <DestinationPin />
+              </View>
+            );
+          })()
+        : null}
+
       {spots.map((spot) => {
         const key = spotKey(spot);
         const { left, top } = project(spot.latitude, spot.longitude);
@@ -123,6 +136,7 @@ export function MapCanvas({
 const styles = StyleSheet.create({
   fill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: color.bg, overflow: 'hidden' },
   tile: { position: 'absolute', width: TILE, height: TILE },
+  destination: { position: 'absolute', transform: [{ translateX: -9 }, { translateY: -9 }] },
   // translate keeps the chip's stem on the coordinate, matching the native anchor.
   marker: { position: 'absolute', transform: [{ translateX: -25 }, { translateY: -37 }] },
 });

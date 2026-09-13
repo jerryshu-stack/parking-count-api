@@ -29,5 +29,5 @@ export function SourceLabel({ source }: { source: SpotSource }) {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center' },
-  dot: { width: 5, height: 5, borderRadius: 2.5, marginRight: space.xs + 1 },
+  dot: { width: 5, height: 5, borderRadius: 2.5, marginRight: space.tight },
 });

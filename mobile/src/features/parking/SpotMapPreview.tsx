@@ -1,7 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { MapCanvas } from '@/features/map/MapCanvas';
-import { Text } from '@/components/Text';
 import { color, radius, space } from '@/theme/tokens';
 import type { NearbySpot } from '@/api/types';
 
@@ -21,6 +20,7 @@ export function SpotMapPreview({ spot, onPress }: { spot: NearbySpot; onPress: (
             latitudeDelta: 0.006,
             longitudeDelta: 0.006,
           }}
+          destination={null}
           spots={[spot]}
           selectedKey={null}
           showsUserLocation={false}
@@ -28,11 +28,6 @@ export function SpotMapPreview({ spot, onPress }: { spot: NearbySpot; onPress: (
           onSelect={() => {}}
           onPressMap={() => {}}
         />
-      </View>
-      <View style={styles.badge}>
-        <Text variant="caption" tone="secondary">
-          點擊開啟導航
-        </Text>
       </View>
     </Pressable>
   );
@@ -47,14 +42,5 @@ const styles = StyleSheet.create({
     backgroundColor: color.surfacePressed,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: color.hairline,
-  },
-  badge: {
-    position: 'absolute',
-    left: space.sm,
-    bottom: space.sm,
-    paddingHorizontal: space.sm,
-    paddingVertical: 3,
-    borderRadius: radius.sm,
-    backgroundColor: 'rgba(255,255,255,0.92)',
   },
 });

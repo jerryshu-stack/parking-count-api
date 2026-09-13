@@ -35,7 +35,7 @@ export function RowSkeletonList({ count = 5 }: { count?: number }) {
 const bone = { backgroundColor: color.surfacePressed, borderRadius: radius.sm } as const;
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', paddingVertical: space.md + 2, paddingHorizontal: space.lg },
+  row: { flexDirection: 'row', paddingVertical: space.base, paddingHorizontal: space.lg },
   rail: { width: ROW_TEXT_INSET - space.lg - space.md, alignItems: 'flex-end' },
   count: { ...bone, width: 34, height: 22 },
   body: { flex: 1, marginLeft: space.md },
