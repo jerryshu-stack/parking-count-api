@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { availabilityColor } from '@/components/Availability';
@@ -11,6 +11,7 @@ import { Text } from '@/components/Text';
 import { ApiError } from '@/api/client';
 import { uploadReport } from '@/api/parking';
 import { useAuth } from '@/features/auth/AuthContext';
+import { clearPendingPhoto, takePendingPhoto } from '@/features/contribution/pendingPhoto';
 import { preparePhoto } from '@/features/contribution/preparePhoto';
 import { describeArea, useLocation, type Coords } from '@/hooks/useLocation';
 import { color, radius, space } from '@/theme/tokens';
@@ -19,10 +20,10 @@ type Phase =
   | { state: 'ready' }
   | { state: 'uploading' }
   | { state: 'done'; count: number; unlockedNow: boolean }
-  | { state: 'failed'; message: string };
+  | { state: 'failed'; message: string; detail?: string };
 
 export default function ReviewScreen() {
-  const { uri } = useLocalSearchParams<{ uri: string }>();
+  const uri = takePendingPhoto();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { unlocked, refresh } = useAuth();
@@ -35,6 +36,10 @@ export default function ReviewScreen() {
   // A report without a coordinate is meaningless, so this blocks submission -- but
   // it has to say so rather than leaving the button greyed out with no reason.
   const locationFailed = location.status === 'denied' || location.status === 'unavailable';
+
+  // Reaching this screen with no photo means the handoff broke; say so rather than
+  // rendering an empty frame.
+  const missingPhoto = !uri;
 
   /** The coordinate is for the backend; the user sees the place name instead. */
   const resolveLocation = useCallback(async () => {
@@ -66,17 +71,31 @@ export default function ReviewScreen() {
       });
       await refresh();
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      clearPendingPhoto();
       setPhase({ state: 'done', count: result.count, unlockedNow: wasLocked });
     } catch (e) {
-      const detail = e instanceof ApiError ? `${e.kind} ${e.status}` : String(e);
+      const detail = e instanceof ApiError ? `${e.kind} ${e.status} · ${e.cause ?? ''}` : String(e);
       console.error(`[parktogether] upload failed: ${detail}`);
       const message =
         e instanceof ApiError && e.kind === 'network'
           ? '照片上傳失敗，請確認與伺服器的連線'
           : '照片分析失敗，請換個角度再拍一次';
-      setPhase({ state: 'failed', message });
+      setPhase({ state: 'failed', message, detail });
     }
   }, [coords, uri, refresh, wasLocked]);
+
+  if (missingPhoto) {
+    return (
+      <View style={[styles.fill, { paddingTop: insets.top + space.xxl }]}>
+        <Text variant="rowTitle" style={styles.missing}>
+          找不到剛拍的照片，請重新拍攝
+        </Text>
+        <View style={[styles.footer, { paddingTop: space.lg }]}>
+          <Button label="重新拍攝" onPress={() => router.replace('/report/camera')} />
+        </View>
+      </View>
+    );
+  }
 
   if (phase.state === 'done') {
     return (
@@ -140,9 +159,16 @@ export default function ReviewScreen() {
         </View>
 
         {phase.state === 'failed' ? (
-          <Text variant="meta" style={styles.error}>
-            {phase.message}
-          </Text>
+          <>
+            <Text variant="meta" style={styles.error}>
+              {phase.message}
+            </Text>
+            {phase.detail ? (
+              <Text variant="caption" tone="tertiary" style={styles.detail} selectable>
+                {phase.detail}
+              </Text>
+            ) : null}
+          </>
         ) : null}
       </View>
 
@@ -203,6 +229,8 @@ const styles = StyleSheet.create({
   blocked: { color: color.none },
   pinBlocked: { borderColor: color.none },
   error: { marginTop: space.md, color: color.none },
+  detail: { marginTop: space.xs },
+  missing: { paddingHorizontal: space.lg },
 
   result: { flex: 1, paddingHorizontal: space.xl },
   countRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: space.xl },

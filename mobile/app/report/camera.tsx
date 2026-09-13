@@ -3,6 +3,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
+
+import { setPendingPhoto } from '@/features/contribution/pendingPhoto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
@@ -28,7 +30,8 @@ export default function CameraScreen() {
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       const photo = await camera.current?.takePictureAsync({ quality: 0.7 });
       if (photo?.uri) {
-        router.replace({ pathname: '/report/review', params: { uri: photo.uri } });
+        setPendingPhoto(photo.uri);
+        router.replace('/report/review');
         return;
       }
       setFailed(true);

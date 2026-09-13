@@ -32,11 +32,14 @@ export type ApiErrorKind =
 export class ApiError extends Error {
   readonly kind: ApiErrorKind;
   readonly status: number;
+  /** Underlying failure, when there was one. Shown only in the report diagnostics. */
+  readonly cause?: string;
 
-  constructor(kind: ApiErrorKind, status: number, message: string) {
+  constructor(kind: ApiErrorKind, status: number, message: string, cause?: string) {
     super(message);
     this.kind = kind;
     this.status = status;
+    this.cause = cause;
   }
 }
 
@@ -112,7 +115,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   } catch (cause) {
     const reason = cause instanceof Error ? `${cause.name}: ${cause.message}` : String(cause);
     console.error(`[parktogether] ${method} ${path} failed -- ${reason}`);
-    throw new ApiError('network', 0, '連線失敗，請稍後再試');
+    throw new ApiError('network', 0, '連線失敗，請稍後再試', reason);
   } finally {
     clearTimeout(timer);
   }
